@@ -250,7 +250,9 @@ function Navbar({ profile, step, onSignIn }: { profile: SlopScanProfile | null; 
     <nav className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--background)]/80 backdrop-blur-lg">
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <img src="/logo.jpg" alt="SlopScan" className="w-8 h-8 rounded-lg object-cover" />
+          <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0">
+            <img src="/logo.jpg" alt="SlopScan" className="h-full w-auto object-left" />
+          </div>
           <span className="text-lg font-bold tracking-tight">
             <span className="text-[var(--accent-cyan)]">Slop</span>Scan
           </span>
@@ -444,15 +446,9 @@ export default function Home() {
 
             <div className="relative max-w-6xl mx-auto px-4 py-16 md:py-24">
               <div className="flex flex-col items-center text-center">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="relative">
-                    <img src="/logo.jpg" alt="SlopScan" className="w-14 h-14 rounded-xl object-cover" />
-                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] opacity-30 blur-lg" />
-                  </div>
-                  <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-                    <span className="text-[var(--accent-cyan)] glow-cyan">Slop</span>
-                    <span className="text-[var(--foreground)]">Scan</span>
-                  </h1>
+                <div className="relative mb-6">
+                  <img src="/logo.jpg" alt="SlopScan" className="h-20 md:h-28 w-auto object-contain" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-[var(--accent-cyan)] to-[var(--accent-purple)] opacity-20 blur-2xl" />
                 </div>
 
                 <p className="text-xl md:text-2xl text-[var(--muted)] mb-2 max-w-2xl">
@@ -622,7 +618,9 @@ export default function Home() {
             <div className="max-w-6xl mx-auto px-4 py-8">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
-                  <img src="/logo.jpg" alt="SlopScan" className="w-6 h-6 rounded-md object-cover" />
+                  <div className="w-6 h-6 rounded-md overflow-hidden flex-shrink-0">
+                    <img src="/logo.jpg" alt="SlopScan" className="h-full w-auto object-left" />
+                  </div>
                   <span className="font-bold text-sm">SlopScan</span>
                   <span className="text-[var(--muted)] text-xs">· Humans only.</span>
                 </div>
