@@ -1,6 +1,3 @@
-import fs from "fs";
-import path from "path";
-
 export interface StoredPost {
   id: number;
   author: string;
@@ -17,60 +14,59 @@ export interface StoredPost {
   humanScore: number;
 }
 
-// Resolve a writable data file path
-function getDataFile(): string {
-  const projectFile = path.join(process.cwd(), "data", "posts.json");
-  try {
-    const dir = path.dirname(projectFile);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.accessSync(dir, fs.constants.W_OK);
-    return projectFile;
-  } catch {
-    return "/tmp/slopscan-posts.json";
+const POSTS_KEY = "posts";
+
+// ── Read: Edge Config SDK (fast edge reads) ──
+async function load(): Promise<StoredPost[]> {
+  const ecUrl = process.env.EDGE_CONFIG;
+  if (ecUrl) {
+    const { createClient } = await import("@vercel/edge-config");
+    const client = createClient(ecUrl);
+    const data = await client.get<StoredPost[]>(POSTS_KEY);
+    return data ?? [];
   }
+  // Local dev fallback
+  return global.__slopscan_posts ?? [];
 }
 
-const DATA_FILE = getDataFile();
+// ── Write: Vercel REST API ──
+async function save(posts: StoredPost[]) {
+  const ecId = process.env.EDGE_CONFIG_ID;
+  const token = process.env.VERCEL_API_TOKEN;
+  if (ecId && token) {
+    await fetch(`https://api.vercel.com/v1/edge-config/${ecId}/items`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        items: [{ operation: "upsert", key: POSTS_KEY, value: posts }],
+      }),
+    });
+    return;
+  }
+  // Local dev fallback
+  global.__slopscan_posts = posts;
+}
 
-// Use a global to survive HMR in dev and warm function instances on Vercel
+// Local dev fallback
 declare global {
   var __slopscan_posts: StoredPost[] | undefined;
 }
 
-function load(): StoredPost[] {
-  if (global.__slopscan_posts) return global.__slopscan_posts;
-  try {
-    if (fs.existsSync(DATA_FILE)) {
-      global.__slopscan_posts = JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
-      return global.__slopscan_posts!;
-    }
-  } catch {}
-  global.__slopscan_posts = [];
-  return global.__slopscan_posts;
-}
-
-function save() {
-  try {
-    const dir = path.dirname(DATA_FILE);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(DATA_FILE, JSON.stringify(global.__slopscan_posts ?? [], null, 2));
-  } catch {
-    // Write failed (read-only FS on Vercel) — data stays in memory
-  }
-}
-
-export function getAllPosts(): StoredPost[] {
+export async function getAllPosts(): Promise<StoredPost[]> {
   return load();
 }
 
-export function createPost(data: {
+export async function createPost(data: {
   author: string;
   handle: string;
   avatar: string;
   content: string;
   humanScore: number;
-}): StoredPost {
-  const posts = load();
+}): Promise<StoredPost> {
+  const posts = await load();
   const newPost: StoredPost = {
     id: Date.now(),
     author: data.author,
@@ -87,12 +83,12 @@ export function createPost(data: {
     humanScore: data.humanScore,
   };
   posts.unshift(newPost);
-  save();
+  await save(posts);
   return newPost;
 }
 
-export function toggleLike(postId: number, userId: string): StoredPost | null {
-  const posts = load();
+export async function toggleLike(postId: number, userId: string): Promise<StoredPost | null> {
+  const posts = await load();
   const post = posts.find((p) => p.id === postId);
   if (!post) return null;
 
@@ -104,12 +100,12 @@ export function toggleLike(postId: number, userId: string): StoredPost | null {
     post.likedBy.push(userId);
     post.likes++;
   }
-  save();
+  await save(posts);
   return post;
 }
 
-export function toggleRepost(postId: number, userId: string): StoredPost | null {
-  const posts = load();
+export async function toggleRepost(postId: number, userId: string): Promise<StoredPost | null> {
+  const posts = await load();
   const post = posts.find((p) => p.id === postId);
   if (!post) return null;
 
@@ -121,6 +117,6 @@ export function toggleRepost(postId: number, userId: string): StoredPost | null 
     post.repostedBy.push(userId);
     post.reposts++;
   }
-  save();
+  await save(posts);
   return post;
 }
