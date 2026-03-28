@@ -677,8 +677,8 @@ export default function Home() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto mb-8">
                 <div className="border border-[var(--border)] bg-[var(--card-bg)] p-5 rounded-lg">
                   <div className="text-[var(--accent-cyan)] text-2xl mb-2">&#x1F4B3;</div>
-                  <h3 className="font-bold text-sm mb-1">Post Fee</h3>
-                  <p className="text-xs text-[var(--muted)]">$1 of $SLOPSCAN per post</p>
+                  <h3 className="font-bold text-sm mb-1">Hold to Post</h3>
+                  <p className="text-xs text-[var(--muted)]">Hold $SLOPSCAN to unlock posting</p>
                 </div>
                 <div className="border border-[var(--border)] bg-[var(--card-bg)] p-5 rounded-lg">
                   <div className="text-[var(--accent-green)] text-2xl mb-2">&#x1F4C8;</div>
@@ -996,7 +996,6 @@ export default function Home() {
                     />
                     <div className="flex items-center justify-between border-t border-[var(--border)] pt-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-[var(--muted)]">$1 per post</span>
                         {newPostText.length > 0 && (
                           <span className={`text-xs font-mono ${newPostText.length > MAX_POST_LENGTH * 0.9 ? "text-[var(--accent-red)]" : "text-[var(--muted)]"}`}>
                             {newPostText.length}/{MAX_POST_LENGTH}
@@ -1162,24 +1161,29 @@ export default function Home() {
         </div>
       )}
 
-      {/* Wallet Prompt Modal */}
+      {/* Verify $SLOPSCAN Holdings Modal */}
       {showWalletPrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowWalletPrompt(false)}>
           <div className="bg-[var(--card-bg)] border border-[var(--border)] rounded-2xl p-6 max-w-sm mx-4 w-full" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-bold text-lg mb-2">Connect Wallet to Post</h3>
+            <h3 className="font-bold text-lg mb-2">Hold $SLOPSCAN to Post</h3>
             <p className="text-sm text-[var(--muted)] mb-6">
-              You need $1 of $SLOPSCAN to post. Connect your wallet first.
+              You need to hold $SLOPSCAN in your wallet to post. Verify your holdings or grab some first.
             </p>
             <div className="space-y-3">
               <div className="flex justify-center">
                 <WalletMultiButton />
               </div>
-              <div className="text-center text-xs text-[var(--muted)]">or</div>
+              <p className="text-center text-xs text-[var(--muted)]">Connect wallet to verify $SLOPSCAN holdings</p>
+              <div className="flex items-center gap-3 my-2">
+                <div className="flex-1 h-px bg-[var(--border)]" />
+                <span className="text-xs text-[var(--muted)]">or</span>
+                <div className="flex-1 h-px bg-[var(--border)]" />
+              </div>
               <a
                 href="https://pump.fun/?q=slopscan&tab=created_timestamp"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-3 border border-[var(--accent-cyan)] text-[var(--accent-cyan)] font-bold rounded-lg hover:bg-cyan-500/10 transition-colors flex items-center justify-center text-sm"
+                className="w-full py-3 bg-gradient-to-r from-[var(--accent-cyan)] to-[var(--accent-blue)] text-black font-bold rounded-full hover:opacity-90 transition-opacity flex items-center justify-center text-sm"
               >
                 Buy $SLOPSCAN
               </a>
