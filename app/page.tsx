@@ -567,6 +567,11 @@ export default function Home() {
                   </a>
                 </div>
 
+                <div className="mt-4 px-4 py-2 bg-[var(--card-bg)] border border-[var(--border)] rounded-lg inline-block">
+                  <span className="text-xs text-[var(--muted)] font-mono">CA: </span>
+                  <span className="text-xs text-[var(--foreground)] font-mono">coming soon</span>
+                </div>
+
               </div>
             </div>
           </header>
