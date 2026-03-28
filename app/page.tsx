@@ -250,9 +250,7 @@ function Navbar({ profile, step, onSignIn }: { profile: SlopScanProfile | null; 
     <nav className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--background)]/80 backdrop-blur-lg">
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center text-sm font-bold text-black">
-            S
-          </div>
+          <img src="/logo.jpg" alt="SlopScan" className="w-8 h-8 rounded-lg object-cover" />
           <span className="text-lg font-bold tracking-tight">
             <span className="text-[var(--accent-cyan)]">Slop</span>Scan
           </span>
@@ -447,9 +445,9 @@ export default function Home() {
             <div className="relative max-w-6xl mx-auto px-4 py-16 md:py-24">
               <div className="flex flex-col items-center text-center">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center">
-                    <span className="text-2xl font-bold text-black">S</span>
-                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] opacity-50 blur-lg" />
+                  <div className="relative">
+                    <img src="/logo.jpg" alt="SlopScan" className="w-14 h-14 rounded-xl object-cover" />
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] opacity-30 blur-lg" />
                   </div>
                   <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
                     <span className="text-[var(--accent-cyan)] glow-cyan">Slop</span>
@@ -624,7 +622,7 @@ export default function Home() {
             <div className="max-w-6xl mx-auto px-4 py-8">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-md bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center text-xs font-bold text-black">S</div>
+                  <img src="/logo.jpg" alt="SlopScan" className="w-6 h-6 rounded-md object-cover" />
                   <span className="font-bold text-sm">SlopScan</span>
                   <span className="text-[var(--muted)] text-xs">· Humans only.</span>
                 </div>
