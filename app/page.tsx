@@ -558,7 +558,7 @@ export default function Home() {
                     Sign In With X
                   </button>
                   <a
-                    href="https://pump.fun/coin/G7EebyKn9As2Q7AdvHy57T9MxrGpdvTS9c2M1DCCpump"
+                    href="https://pump.fun/?q=human+social&tab=created_timestamp"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-8 py-3 border border-[var(--accent-cyan)] text-[var(--accent-cyan)] font-bold rounded-lg hover:bg-cyan-500/10 transition-colors"
@@ -569,7 +569,7 @@ export default function Home() {
 
                 <div className="mt-4 px-4 py-2 bg-[var(--card-bg)] border border-[var(--border)] rounded-lg inline-block">
                   <span className="text-xs text-[var(--muted)] font-mono">CA: </span>
-                  <span className="text-xs text-[var(--foreground)] font-mono select-all">G7EebyKn9As2Q7AdvHy57T9MxrGpdvTS9c2M1DCCpump</span>
+                  <span className="text-xs text-[var(--foreground)] font-mono">coming soon</span>
                 </div>
 
               </div>
@@ -695,7 +695,7 @@ export default function Home() {
                 </div>
               </div>
               <a
-                href="https://pump.fun/coin/G7EebyKn9As2Q7AdvHy57T9MxrGpdvTS9c2M1DCCpump"
+                href="https://pump.fun/?q=human+social&tab=created_timestamp"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-8 py-3 bg-gradient-to-r from-[var(--accent-cyan)] to-[var(--accent-blue)] text-black font-bold rounded-lg hover:opacity-90 transition-opacity shadow-lg shadow-cyan-500/20"
@@ -1142,7 +1142,7 @@ export default function Home() {
               <h3 className="font-bold text-lg mb-3">$HUMAN</h3>
               <p className="text-sm text-[var(--muted)] mb-3">The token that powers human-only social.</p>
               <a
-                href="https://pump.fun/coin/G7EebyKn9As2Q7AdvHy57T9MxrGpdvTS9c2M1DCCpump"
+                href="https://pump.fun/?q=human+social&tab=created_timestamp"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block w-full py-2.5 text-center bg-gradient-to-r from-[var(--accent-cyan)] to-[var(--accent-blue)] text-black text-sm font-bold rounded-full hover:opacity-90 transition-opacity"
@@ -1183,7 +1183,7 @@ export default function Home() {
                 <div className="flex-1 h-px bg-[var(--border)]" />
               </div>
               <a
-                href="https://pump.fun/coin/G7EebyKn9As2Q7AdvHy57T9MxrGpdvTS9c2M1DCCpump"
+                href="https://pump.fun/?q=human+social&tab=created_timestamp"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full py-3 bg-gradient-to-r from-[var(--accent-cyan)] to-[var(--accent-blue)] text-black font-bold rounded-full hover:opacity-90 transition-opacity flex items-center justify-center text-sm"
