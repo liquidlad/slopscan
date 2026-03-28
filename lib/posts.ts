@@ -120,3 +120,12 @@ export async function toggleRepost(postId: number, userId: string): Promise<Stor
   await save(posts);
   return post;
 }
+
+export async function deletePost(postId: number, username: string): Promise<boolean> {
+  const posts = await load();
+  const idx = posts.findIndex((p) => p.id === postId && p.handle === `@${username}`);
+  if (idx === -1) return false;
+  posts.splice(idx, 1);
+  await save(posts);
+  return true;
+}

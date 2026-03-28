@@ -498,6 +498,20 @@ export default function Home() {
     navigator.clipboard.writeText(url);
   };
 
+  const handleDelete = async (postId: number) => {
+    if (!profile) return;
+    try {
+      const res = await fetch(`/api/posts/${postId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: profile.username }),
+      });
+      if (res.ok) {
+        setPosts((prev) => prev.filter((p) => p.id !== postId));
+      }
+    } catch {}
+  };
+
   const handleSignOut = () => {
     localStorage.removeItem("human_profile");
     document.cookie = "human_user=; max-age=0; path=/";
@@ -1125,6 +1139,17 @@ export default function Home() {
                               >
                                 <IconShare className="w-[18px] h-[18px]" />
                               </button>
+                              {/* Delete (own posts only) */}
+                              {post.handle === `@${profile.username}` && (
+                                <button
+                                  onClick={() => handleDelete(post.id)}
+                                  className="group flex items-center p-2 rounded-full hover:bg-red-500/10 transition-colors text-[var(--muted)] hover:text-[var(--accent-red)]"
+                                >
+                                  <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="currentColor">
+                                    <path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z" />
+                                  </svg>
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>
