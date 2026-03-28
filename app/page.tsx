@@ -28,7 +28,7 @@ interface SlopScanProfile {
   profileImage: string;
 }
 
-type AppStep = "landing" | "connect-x" | "scanning" | "approved" | "create-account" | "feed";
+type AppStep = "landing" | "connect-x" | "scanning" | "approved" | "create-account" | "account" | "feed";
 
 interface AuditSignal {
   label: string;
@@ -306,7 +306,7 @@ export default function Home() {
   const [formBio, setFormBio] = useState("");
   const [formImage, setFormImage] = useState("");
 
-  const { connected } = useWallet();
+  const { connected, publicKey } = useWallet();
 
   // Check for existing session or OAuth callback
   useEffect(() => {
@@ -401,7 +401,7 @@ export default function Home() {
       profileImage: formImage,
     };
     setProfile(newProfile);
-    setStep("feed");
+    setStep("account");
   };
 
   const handlePost = () => {
@@ -824,31 +824,110 @@ export default function Home() {
       )}
 
       {/* ============================================================ */}
+      {/* ACCOUNT PAGE */}
+      {/* ============================================================ */}
+      {step === "account" && profile && (
+        <div className="max-w-lg mx-auto px-4 py-12">
+          {/* Profile Card */}
+          <div className="border border-[var(--border)] bg-[var(--card-bg)] rounded-lg overflow-hidden mb-6">
+            {/* Banner area */}
+            <div className="h-24 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-cyan-500/20" />
+
+            <div className="px-6 pb-6">
+              {/* Avatar */}
+              <div className="flex items-end gap-4 -mt-10 mb-4">
+                <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-[var(--card-bg)] flex-shrink-0">
+                  {profile.profileImage ? (
+                    <img src={profile.profileImage} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center text-2xl font-bold text-black">
+                      {profile.displayName[0]}
+                    </div>
+                  )}
+                </div>
+                <div className="mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-lg">{profile.displayName}</span>
+                    <span className="text-[var(--accent-green)]">&#x2713;</span>
+                    <ScanBadge score={100} />
+                  </div>
+                  <div className="text-[var(--muted)] text-sm">@{profile.username}</div>
+                </div>
+              </div>
+
+              {/* Bio */}
+              {profile.bio && (
+                <p className="text-sm text-[var(--foreground)] mb-4">{profile.bio}</p>
+              )}
+
+              {/* Verified badge */}
+              <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/5 border border-emerald-500/20 rounded-lg mb-4">
+                <span className="text-[var(--accent-green)]">&#x2713;</span>
+                <span className="text-sm text-[var(--accent-green)] font-bold">Human Verified</span>
+                <span className="text-xs text-[var(--muted)] ml-auto">via X Account Audit</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Connect Wallet Section */}
+          <div className="border border-[var(--border)] bg-[var(--card-bg)] rounded-lg p-6 mb-6">
+            <h3 className="font-bold text-lg mb-2">Connect Wallet to Post</h3>
+            <p className="text-sm text-[var(--muted)] mb-6">
+              Connect your Solana wallet to start posting. You&apos;ll need $1 of $SLOPSCAN per post.
+            </p>
+
+            {!connected ? (
+              <div className="flex justify-center">
+                <WalletMultiButton />
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/5 border border-emerald-500/20 rounded-lg mb-6">
+                  <span className="text-[var(--accent-green)]">&#x2713;</span>
+                  <span className="text-sm text-[var(--accent-green)] font-bold">Wallet Connected</span>
+                  <span className="text-xs text-[var(--muted)] font-mono ml-auto">
+                    {publicKey?.toBase58().slice(0, 4)}...{publicKey?.toBase58().slice(-4)}
+                  </span>
+                </div>
+
+                {/* Token options */}
+                <div className="space-y-3">
+                  <button
+                    onClick={() => setStep("feed")}
+                    className="w-full py-3 bg-gradient-to-r from-[var(--accent-cyan)] to-[var(--accent-blue)] text-black font-bold rounded-lg hover:opacity-90 transition-opacity"
+                  >
+                    I Already Own $SLOPSCAN — Enter Feed
+                  </button>
+                  <a
+                    href="https://pump.fun/?q=slopscan&tab=created_timestamp"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3 border border-[var(--accent-cyan)] text-[var(--accent-cyan)] font-bold rounded-lg hover:bg-cyan-500/10 transition-colors flex items-center justify-center"
+                  >
+                    Buy $1 of $SLOPSCAN
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Skip for now */}
+          {!connected && (
+            <button
+              onClick={() => setStep("feed")}
+              className="w-full text-[var(--muted)] text-sm hover:text-[var(--foreground)] transition-colors underline underline-offset-4 text-center"
+            >
+              Skip for now — browse the feed
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ============================================================ */}
       {/* FEED */}
       {/* ============================================================ */}
       {step === "feed" && (
         <div className="max-w-2xl mx-auto px-4 py-8">
-          {/* Welcome banner */}
-          {profile && (
-            <div className="border border-emerald-500/20 bg-emerald-500/5 rounded-lg p-4 mb-6 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
-                {profile.profileImage ? (
-                  <img src={profile.profileImage} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center text-sm font-bold text-black">
-                    {profile.displayName[0]}
-                  </div>
-                )}
-              </div>
-              <div>
-                <div className="text-sm font-bold">Welcome, {profile.displayName}! <span className="text-[var(--accent-green)]">&#x2713;</span></div>
-                <div className="text-xs text-[var(--muted)]">You&apos;re verified human. Connect a wallet to start posting.</div>
-              </div>
-              <div className="ml-auto">
-                <WalletMultiButton />
-              </div>
-            </div>
-          )}
 
           {/* Compose */}
           <div className="border border-[var(--border)] bg-[var(--card-bg)] p-4 rounded-lg mb-6">
