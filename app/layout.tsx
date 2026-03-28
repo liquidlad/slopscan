@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SLOPSCAN | Humans Only Social",
-  description: "SlopScan - The first truly human-only social platform. No bots. No agents. No slop. Post for $1, earn when people engage.",
+  title: "Human Social | Humans Only",
+  description: "Human Social - The first truly human-only social platform. No bots. No agents. No slop. Powered by $HUMAN on Solana.",
   icons: {
     icon: "/favicon.ico",
   },

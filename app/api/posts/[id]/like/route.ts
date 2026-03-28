@@ -13,7 +13,7 @@ export async function POST(
     return NextResponse.json({ error: "Missing userId" }, { status: 400 });
   }
 
-  const post = toggleLike(parseInt(id), userId);
+  const post = await toggleLike(parseInt(id), userId);
   if (!post) {
     return NextResponse.json({ error: "Post not found" }, { status: 404 });
   }

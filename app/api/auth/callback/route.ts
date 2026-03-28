@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
 
     const response = NextResponse.redirect(`${baseUrl}?auth=success`);
 
-    response.cookies.set("slopscan_user", JSON.stringify(userInfo), {
+    response.cookies.set("human_user", JSON.stringify(userInfo), {
       httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",

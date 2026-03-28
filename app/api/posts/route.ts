@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAllPosts, createPost } from "@/lib/posts";
 
 export async function GET() {
-  const posts = getAllPosts();
+  const posts = await getAllPosts();
   return NextResponse.json(posts);
 }
 
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  const post = createPost({
+  const post = await createPost({
     author,
     handle,
     avatar: avatar || author[0],
