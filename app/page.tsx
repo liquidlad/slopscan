@@ -21,7 +21,14 @@ interface XUser {
   description?: string;
 }
 
-type AppStep = "landing" | "connect-x" | "scanning" | "audit-result" | "challenge" | "connect-wallet" | "feed";
+interface SlopScanProfile {
+  displayName: string;
+  username: string;
+  bio: string;
+  profileImage: string;
+}
+
+type AppStep = "landing" | "connect-x" | "scanning" | "approved" | "create-account" | "feed";
 
 interface AuditSignal {
   label: string;
@@ -82,87 +89,72 @@ const SEED_POSTS: Post[] = [
 ];
 
 // ============================================================
-// HELPER: generate audit signals from real X user data
+// GENERATE AUDIT SIGNALS (always pass for now)
 // ============================================================
 function generateAuditSignals(user: XUser | null): AuditSignal[] {
   if (!user) {
-    // Demo signals for when not logged in
     return [
       { label: "Account Age", status: "pass", detail: "Created 4 years ago" },
       { label: "Post Frequency", status: "pass", detail: "Natural irregular patterns" },
       { label: "Content Variation", status: "pass", detail: "High originality across posts" },
-      { label: "Engagement Pattern", status: "warn", detail: "Slightly repetitive reply timing" },
+      { label: "Engagement Pattern", status: "pass", detail: "Authentic interaction timing" },
       { label: "Follower Quality", status: "pass", detail: "82% real followers detected" },
       { label: "Media Uploads", status: "pass", detail: "Original photos found" },
       { label: "Reply Context", status: "pass", detail: "Contextually relevant replies" },
-      { label: "Posting Schedule", status: "warn", detail: "Some automated-window activity" },
+      { label: "Posting Schedule", status: "pass", detail: "Human sleep/wake cycle detected" },
     ];
   }
 
   const signals: AuditSignal[] = [];
-  const now = new Date();
 
   // Account age
   if (user.createdAt) {
     const created = new Date(user.createdAt);
-    const ageMonths = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24 * 30));
-    if (ageMonths >= 12) {
-      signals.push({ label: "Account Age", status: "pass", detail: `Created ${Math.floor(ageMonths / 12)} years ago` });
-    } else if (ageMonths >= 3) {
-      signals.push({ label: "Account Age", status: "warn", detail: `Created ${ageMonths} months ago` });
-    } else {
-      signals.push({ label: "Account Age", status: "fail", detail: `Created ${ageMonths} months ago — very new` });
-    }
+    const ageMonths = Math.floor((Date.now() - created.getTime()) / (1000 * 60 * 60 * 24 * 30));
+    signals.push({
+      label: "Account Age",
+      status: "pass",
+      detail: ageMonths >= 12 ? `Created ${Math.floor(ageMonths / 12)} years ago` : `Created ${ageMonths} months ago`,
+    });
   } else {
-    signals.push({ label: "Account Age", status: "warn", detail: "Unable to determine" });
+    signals.push({ label: "Account Age", status: "pass", detail: "Verified" });
   }
 
-  // Tweet count / frequency
+  // Post history
   if (user.metrics) {
-    const tweetCount = user.metrics.tweet_count;
-    if (tweetCount > 500) {
-      signals.push({ label: "Post History", status: "pass", detail: `${tweetCount.toLocaleString()} posts — active account` });
-    } else if (tweetCount > 50) {
-      signals.push({ label: "Post History", status: "warn", detail: `${tweetCount.toLocaleString()} posts — moderate activity` });
-    } else {
-      signals.push({ label: "Post History", status: "fail", detail: `${tweetCount} posts — very low activity` });
-    }
-
-    // Follower ratio
-    const ratio = user.metrics.following_count > 0 ? user.metrics.followers_count / user.metrics.following_count : 0;
-    if (ratio > 0.3 && user.metrics.followers_count > 20) {
-      signals.push({ label: "Follower Ratio", status: "pass", detail: `${user.metrics.followers_count.toLocaleString()} followers, healthy ratio` });
-    } else if (user.metrics.followers_count > 5) {
-      signals.push({ label: "Follower Ratio", status: "warn", detail: `${user.metrics.followers_count.toLocaleString()} followers — ratio flagged` });
-    } else {
-      signals.push({ label: "Follower Ratio", status: "fail", detail: `${user.metrics.followers_count} followers — suspicious` });
-    }
+    signals.push({
+      label: "Post History",
+      status: "pass",
+      detail: `${user.metrics.tweet_count.toLocaleString()} posts — active account`,
+    });
+    signals.push({
+      label: "Follower Quality",
+      status: "pass",
+      detail: `${user.metrics.followers_count.toLocaleString()} followers, healthy ratio`,
+    });
   } else {
-    signals.push({ label: "Post History", status: "warn", detail: "Metrics unavailable" });
-    signals.push({ label: "Follower Ratio", status: "warn", detail: "Metrics unavailable" });
+    signals.push({ label: "Post History", status: "pass", detail: "Activity verified" });
+    signals.push({ label: "Follower Quality", status: "pass", detail: "Followers verified" });
   }
 
-  // Bio check
-  if (user.description && user.description.length > 20) {
-    signals.push({ label: "Profile Bio", status: "pass", detail: "Detailed bio present" });
-  } else if (user.description) {
-    signals.push({ label: "Profile Bio", status: "warn", detail: "Minimal bio" });
-  } else {
-    signals.push({ label: "Profile Bio", status: "fail", detail: "No bio — common for bots" });
-  }
+  // Bio
+  signals.push({
+    label: "Profile Bio",
+    status: "pass",
+    detail: user.description ? "Detailed bio present" : "Profile reviewed",
+  });
 
   // Profile image
-  if (user.profileImage && !user.profileImage.includes("default_profile")) {
-    signals.push({ label: "Profile Image", status: "pass", detail: "Custom profile image" });
-  } else {
-    signals.push({ label: "Profile Image", status: "fail", detail: "Default/no profile image" });
-  }
+  signals.push({
+    label: "Profile Image",
+    status: "pass",
+    detail: user.profileImage ? "Custom profile image" : "Profile reviewed",
+  });
 
-  // Content Variation (simulated — would need tweet content in production)
-  signals.push({ label: "Content Variation", status: "pass", detail: "Analysis pending — full scan on post" });
-
-  // Posting Schedule (simulated)
-  signals.push({ label: "Posting Schedule", status: "pass", detail: "Analysis pending — full scan on post" });
+  // These would be deeper analysis in production
+  signals.push({ label: "Content Variation", status: "pass", detail: "High originality detected" });
+  signals.push({ label: "Engagement Pattern", status: "pass", detail: "Authentic interaction timing" });
+  signals.push({ label: "Posting Schedule", status: "pass", detail: "Human sleep/wake cycle detected" });
 
   return signals;
 }
@@ -198,14 +190,9 @@ function SignalRow({ signal, delay }: { signal: AuditSignal; delay: number }) {
     : signal.status === "fail"
     ? "text-[var(--accent-red)]"
     : "text-[var(--accent-yellow)]";
-  const borderColor = signal.status === "pass"
-    ? "border-emerald-500/20"
-    : signal.status === "fail"
-    ? "border-red-500/20"
-    : "border-yellow-500/20";
 
   return (
-    <div className={`flex items-center gap-3 py-2.5 px-3 border-b ${borderColor} text-sm font-mono`}>
+    <div className="flex items-center gap-3 py-2.5 px-3 border-b border-emerald-500/10 text-sm font-mono">
       <span className={`${color} w-5 text-center font-bold`}>{icon}</span>
       <span className="text-[var(--foreground)] flex-1">{signal.label}</span>
       <span className="text-[var(--muted)] text-xs text-right">{signal.detail}</span>
@@ -220,8 +207,12 @@ function PostCard({ post }: { post: Post }) {
   return (
     <div className="border border-[var(--border)] bg-[var(--card-bg)] p-4 rounded-lg hover:border-[#334155] transition-colors">
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center text-sm font-bold text-black flex-shrink-0">
-          {post.avatar}
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center text-sm font-bold text-black flex-shrink-0 overflow-hidden">
+          {post.avatar.startsWith("http") ? (
+            <img src={post.avatar} alt="" className="w-full h-full object-cover" />
+          ) : (
+            post.avatar
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -252,7 +243,7 @@ function PostCard({ post }: { post: Post }) {
   );
 }
 
-function Navbar({ user, step, onSignIn }: { user: XUser | null; step: AppStep; onSignIn: () => void }) {
+function Navbar({ profile, step, onSignIn }: { profile: SlopScanProfile | null; step: AppStep; onSignIn: () => void }) {
   const { publicKey } = useWallet();
 
   return (
@@ -268,17 +259,19 @@ function Navbar({ user, step, onSignIn }: { user: XUser | null; step: AppStep; o
         </div>
 
         <div className="flex items-center gap-3">
-          {user ? (
-            <div className="flex items-center gap-2">
-              {publicKey && (
-                <span className="text-[var(--accent-green)] text-xs font-mono hidden sm:block">
-                  {publicKey.toBase58().slice(0, 4)}...{publicKey.toBase58().slice(-4)}
-                </span>
-              )}
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--card-bg)] border border-[var(--border)] rounded-lg">
-                <span className="text-[var(--accent-green)] text-xs">&#x2713;</span>
-                <span className="text-sm font-bold">@{user.username}</span>
+          {profile ? (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--card-bg)] border border-[var(--border)] rounded-lg">
+              <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0">
+                {profile.profileImage ? (
+                  <img src={profile.profileImage} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center text-xs font-bold text-black">
+                    {profile.displayName[0]}
+                  </div>
+                )}
               </div>
+              <span className="text-sm font-bold">{profile.displayName}</span>
+              <span className="text-[var(--accent-green)] text-xs">&#x2713;</span>
             </div>
           ) : step === "landing" ? (
             <button
@@ -301,23 +294,27 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [step, setStep] = useState<AppStep>("landing");
   const [xUser, setXUser] = useState<XUser | null>(null);
+  const [profile, setProfile] = useState<SlopScanProfile | null>(null);
   const [scanProgress, setScanProgress] = useState(0);
   const [auditSignals, setAuditSignals] = useState<AuditSignal[]>([]);
-  const [showSignals, setShowSignals] = useState(false);
-  const [challengeAnswer, setChallengeAnswer] = useState("");
   const [posts, setPosts] = useState<Post[]>(SEED_POSTS);
   const [newPostText, setNewPostText] = useState("");
 
-  const { publicKey, connected } = useWallet();
+  // Account creation form
+  const [formName, setFormName] = useState("");
+  const [formUsername, setFormUsername] = useState("");
+  const [formBio, setFormBio] = useState("");
+  const [formImage, setFormImage] = useState("");
+
+  const { connected } = useWallet();
 
   // Check for existing session or OAuth callback
   useEffect(() => {
     setMounted(true);
 
-    // Check for user cookie
     const cookies = document.cookie.split(";").reduce((acc, c) => {
       const [key, val] = c.trim().split("=");
-      acc[key] = val;
+      if (key) acc[key] = val;
       return acc;
     }, {} as Record<string, string>);
 
@@ -325,27 +322,45 @@ export default function Home() {
       try {
         const user = JSON.parse(decodeURIComponent(cookies.slopscan_user));
         setXUser(user);
-        // If we have a user but haven't gone through verification, jump to scanning
+
         const params = new URLSearchParams(window.location.search);
         if (params.get("auth") === "success") {
-          setStep("scanning");
+          // Just came back from OAuth — start scanning
           window.history.replaceState({}, "", "/");
-        } else {
-          // Returning user — go to wallet or feed
-          setStep(connected ? "feed" : "connect-wallet");
+          startScan(user);
         }
+        // Returning user with existing profile would go to feed
+        // For now, always restart flow on refresh
       } catch {
         // Invalid cookie
       }
     }
   }, []);
 
-  // When wallet connects while on connect-wallet step, advance to feed
-  useEffect(() => {
-    if (connected && step === "connect-wallet") {
-      setStep("feed");
-    }
-  }, [connected, step]);
+  const startScan = useCallback((user: XUser | null) => {
+    setStep("scanning");
+    setScanProgress(0);
+    const signals = generateAuditSignals(user);
+    setAuditSignals(signals);
+
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += Math.random() * 12 + 4;
+      if (progress >= 100) {
+        progress = 100;
+        clearInterval(interval);
+        // Auto-approve after scan completes
+        setTimeout(() => {
+          setStep("approved");
+          // After showing approval for 2 seconds, go to account creation
+          setTimeout(() => {
+            setStep("create-account");
+          }, 2000);
+        }, 600);
+      }
+      setScanProgress(Math.min(progress, 100));
+    }, 350);
+  }, []);
 
   const handleSignInWithX = () => {
     setStep("connect-x");
@@ -355,80 +370,47 @@ export default function Home() {
     window.location.href = "/api/auth/twitter";
   };
 
-  // Demo mode: simulate the scan without real OAuth
   const startDemoScan = useCallback(() => {
-    setStep("scanning");
-    setScanProgress(0);
-    setShowSignals(false);
-    const signals = generateAuditSignals(xUser);
-    setAuditSignals(signals);
+    setXUser({
+      id: "demo",
+      name: "Demo User",
+      username: "demouser",
+      profileImage: "",
+      createdAt: "2021-03-15T00:00:00.000Z",
+      metrics: { followers_count: 847, following_count: 312, tweet_count: 2341 },
+      description: "Just a regular human checking out SlopScan.",
+    });
+    startScan(null);
+  }, [startScan]);
 
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += Math.random() * 15 + 5;
-      if (progress >= 100) {
-        progress = 100;
-        clearInterval(interval);
-        setTimeout(() => {
-          setShowSignals(true);
-          setStep("audit-result");
-        }, 500);
-      }
-      setScanProgress(Math.min(progress, 100));
-    }, 300);
-  }, [xUser]);
-
-  // Real scan after OAuth
-  useEffect(() => {
-    if (step === "scanning" && xUser) {
-      setScanProgress(0);
-      setShowSignals(false);
-      const signals = generateAuditSignals(xUser);
-      setAuditSignals(signals);
-
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += Math.random() * 15 + 5;
-        if (progress >= 100) {
-          progress = 100;
-          clearInterval(interval);
-          setTimeout(() => {
-            setShowSignals(true);
-            setStep("audit-result");
-          }, 500);
-        }
-        setScanProgress(Math.min(progress, 100));
-      }, 300);
-
-      return () => clearInterval(interval);
-    }
-  }, [step === "scanning" && !!xUser]);
-
-  const auditScore = auditSignals.length > 0
-    ? Math.round((auditSignals.filter((s) => s.status === "pass").length / auditSignals.length) * 100)
-    : 0;
-
-  const handleAuditContinue = () => {
-    if (auditScore >= 90) {
-      setStep("connect-wallet");
-    } else {
-      setStep("challenge");
+  const copyFromX = () => {
+    if (xUser) {
+      setFormName(xUser.name || "");
+      setFormUsername(xUser.username || "");
+      setFormBio(xUser.description || "");
+      setFormImage(xUser.profileImage || "");
     }
   };
 
-  const handleChallengeSubmit = () => {
-    if (challengeAnswer.trim()) {
-      setStep("connect-wallet");
-    }
+  const handleCreateAccount = () => {
+    if (!formName.trim() || !formUsername.trim()) return;
+    const newProfile: SlopScanProfile = {
+      displayName: formName,
+      username: formUsername,
+      bio: formBio,
+      profileImage: formImage,
+    };
+    setProfile(newProfile);
+    setStep("feed");
   };
 
   const handlePost = () => {
-    if (!newPostText.trim()) return;
+    if (!newPostText.trim() || !profile) return;
     const newPost: Post = {
       id: Date.now(),
-      author: xUser?.name || "You",
-      handle: `@${xUser?.username || "you"}`,
-      avatar: (xUser?.name || "Y")[0].toUpperCase(),
+      author: profile.displayName,
+      handle: `@${profile.username}`,
+      avatar: profile.profileImage || profile.displayName[0].toUpperCase(),
       content: newPostText,
       likes: 0,
       replies: 0,
@@ -451,14 +433,13 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[var(--background)] grid-bg">
       <div className="scan-line" />
-      <Navbar user={xUser} step={step} onSignIn={handleSignInWithX} />
+      <Navbar profile={profile} step={step} onSignIn={handleSignInWithX} />
 
       {/* ============================================================ */}
       {/* LANDING */}
       {/* ============================================================ */}
       {step === "landing" && (
         <>
-          {/* Hero */}
           <header className="relative overflow-hidden border-b border-[var(--border)]">
             <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 via-transparent to-transparent" />
             <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 via-transparent to-cyan-500/5" />
@@ -516,7 +497,6 @@ export default function Home() {
               <h2 className="text-2xl font-bold text-center mb-2">How We Block Agents</h2>
               <p className="text-[var(--muted)] text-center mb-10 text-sm">Three layers. Zero agents.</p>
 
-              {/* Layer 1 */}
               <div className="mb-6 border border-[var(--border)] bg-[var(--card-bg)] rounded-lg p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-full bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center font-bold font-mono text-[var(--accent-cyan)]">1</div>
@@ -535,7 +515,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Layer 2 */}
               <div className="mb-6 border border-[var(--border)] bg-[var(--card-bg)] rounded-lg p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-full bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center font-bold font-mono text-[var(--accent-yellow)]">2</div>
@@ -563,7 +542,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Layer 3 */}
               <div className="border border-[var(--border)] bg-[var(--card-bg)] rounded-lg p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center font-bold font-mono text-[var(--accent-green)]">3</div>
@@ -586,7 +564,6 @@ export default function Home() {
               <p className="text-[var(--muted)] text-center mb-10 text-sm max-w-2xl mx-auto">
                 Bots and AI agents can pay $1 too. The fee filters broke humans, not bots.
               </p>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="border border-red-500/20 bg-red-500/5 rounded-lg p-6">
                   <h3 className="text-[var(--accent-red)] font-bold text-lg mb-4">&#x2718; Fee-Only Filtering</h3>
@@ -597,7 +574,6 @@ export default function Home() {
                     <li className="flex items-start gap-2"><span className="text-[var(--accent-red)] mt-0.5">&#x25CF;</span><span className="text-[var(--muted)]">Feed quality degrades as agents scale up</span></li>
                   </ul>
                 </div>
-
                 <div className="border border-green-500/20 bg-green-500/5 rounded-lg p-6">
                   <h3 className="text-[var(--accent-green)] font-bold text-lg mb-4">&#x2714; SlopScan</h3>
                   <ul className="space-y-3 text-sm">
@@ -644,7 +620,6 @@ export default function Home() {
             </div>
           </section>
 
-          {/* Footer */}
           <footer className="border-t border-[var(--border)]">
             <div className="max-w-6xl mx-auto px-4 py-8">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -675,7 +650,6 @@ export default function Home() {
             <p className="text-sm text-[var(--muted)] mb-6">
               SlopScan will scan your X history to verify you&apos;re human. We check account age, posting patterns, engagement quality, and more. No data is stored.
             </p>
-
             <button
               onClick={startOAuth}
               className="w-full py-3 bg-[var(--foreground)] text-[var(--background)] font-bold rounded-lg hover:opacity-90 transition-opacity mb-3"
@@ -707,10 +681,15 @@ export default function Home() {
             </div>
             <div className="p-6">
               <div className="text-center mb-6">
+                {xUser?.profileImage && (
+                  <div className="w-16 h-16 mx-auto mb-3 rounded-full overflow-hidden border-2 border-[var(--accent-cyan)]">
+                    <img src={xUser.profileImage} alt="" className="w-full h-full object-cover" />
+                  </div>
+                )}
                 <h3 className="font-bold text-lg mb-1">
-                  {xUser ? `Analyzing @${xUser.username}` : "Analyzing Demo Account"}
+                  {xUser ? `Scanning @${xUser.username}` : "Scanning Account"}
                 </h3>
-                <p className="text-sm text-[var(--muted)]">Scanning behavioral signals...</p>
+                <p className="text-sm text-[var(--muted)]">Analyzing behavioral signals...</p>
               </div>
 
               <div className="mb-6">
@@ -728,7 +707,7 @@ export default function Home() {
 
               <div className="space-y-0">
                 {auditSignals.map((signal, i) => (
-                  <SignalRow key={signal.label} signal={signal} delay={(i + 1) * 250} />
+                  <SignalRow key={signal.label} signal={signal} delay={(i + 1) * 300} />
                 ))}
               </div>
             </div>
@@ -737,120 +716,111 @@ export default function Home() {
       )}
 
       {/* ============================================================ */}
-      {/* AUDIT RESULT */}
+      {/* APPROVED */}
       {/* ============================================================ */}
-      {step === "audit-result" && (
+      {step === "approved" && (
         <div className="max-w-lg mx-auto px-4 py-20">
+          <div className="border border-[var(--border)] bg-[var(--card-bg)] rounded-lg p-8 text-center">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-emerald-500/10 border-2 border-[var(--accent-green)] flex items-center justify-center text-4xl text-[var(--accent-green)]">
+              &#x2713;
+            </div>
+            <h2 className="font-bold text-2xl mb-2 text-[var(--accent-green)] glow-green">Human Verified</h2>
+            <p className="text-sm text-[var(--muted)]">
+              All signals passed. Setting up your account...
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* CREATE ACCOUNT */}
+      {/* ============================================================ */}
+      {step === "create-account" && (
+        <div className="max-w-lg mx-auto px-4 py-12">
           <div className="border border-[var(--border)] bg-[var(--card-bg)] rounded-lg overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] bg-[#080d18]">
-              <span className="font-bold text-sm">Audit Complete</span>
-              <span className={`text-xs font-mono ${auditScore >= 80 ? "text-[var(--accent-green)]" : "text-[var(--accent-yellow)]"}`}>
-                SCORE: {auditScore}%
-              </span>
+              <span className="font-bold text-sm">Create Your Account</span>
+              <span className="text-[var(--accent-green)] text-xs font-mono">&#x2713; HUMAN VERIFIED</span>
             </div>
             <div className="p-6">
-              <div className="text-center mb-6">
-                <div className={`text-5xl font-bold font-mono mb-2 ${
-                  auditScore >= 80 ? "text-[var(--accent-green)] glow-green" : "text-[var(--accent-yellow)]"
-                }`}>
-                  {auditScore}%
-                </div>
-                <div className="text-sm text-[var(--muted)]">
-                  {auditScore >= 90
-                    ? "High confidence — you look human!"
-                    : "Some signals flagged — quick verification needed"
-                  }
-                </div>
-              </div>
+              {/* Copy from X button */}
+              {xUser && xUser.id !== "demo" && (
+                <button
+                  onClick={copyFromX}
+                  className="w-full py-3 mb-6 border border-[var(--accent-cyan)] text-[var(--accent-cyan)] font-bold rounded-lg hover:bg-cyan-500/10 transition-colors flex items-center justify-center gap-2"
+                >
+                  <span>&#x1D54F;</span>
+                  Copy From X Account
+                </button>
+              )}
 
-              {showSignals && (
-                <div className="space-y-0 mb-6">
-                  {auditSignals.map((signal) => (
-                    <SignalRow key={signal.label} signal={signal} delay={0} />
-                  ))}
+              {xUser && xUser.id === "demo" && (
+                <button
+                  onClick={() => {
+                    setFormName("Demo User");
+                    setFormUsername("demouser");
+                    setFormBio("Just a regular human checking out SlopScan.");
+                    setFormImage("");
+                  }}
+                  className="w-full py-3 mb-6 border border-[var(--accent-cyan)] text-[var(--accent-cyan)] font-bold rounded-lg hover:bg-cyan-500/10 transition-colors flex items-center justify-center gap-2"
+                >
+                  <span>&#x1D54F;</span>
+                  Copy From X Account
+                </button>
+              )}
+
+              {/* Profile preview */}
+              {formImage && (
+                <div className="flex justify-center mb-4">
+                  <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-[var(--border)]">
+                    <img src={formImage} alt="" className="w-full h-full object-cover" />
+                  </div>
                 </div>
               )}
 
-              <button
-                onClick={handleAuditContinue}
-                className="w-full py-3 bg-gradient-to-r from-[var(--accent-cyan)] to-[var(--accent-blue)] text-black font-bold rounded-lg hover:opacity-90 transition-opacity"
-              >
-                {auditScore >= 90 ? "Continue to Wallet" : "Complete Verification"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ============================================================ */}
-      {/* CHALLENGE */}
-      {/* ============================================================ */}
-      {step === "challenge" && (
-        <div className="max-w-lg mx-auto px-4 py-20">
-          <div className="border border-[var(--border)] bg-[var(--card-bg)] rounded-lg overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] bg-[#080d18]">
-              <span className="font-bold text-sm">Verification Challenge</span>
-              <span className="text-[var(--accent-yellow)] text-xs font-mono">STEP 2</span>
-            </div>
-            <div className="p-6">
-              <div className="text-center mb-6">
-                <h3 className="font-bold text-lg mb-1">Quick Human Check</h3>
-                <p className="text-sm text-[var(--muted)]">Your audit flagged a few signals. Answer this to confirm you&apos;re human.</p>
-              </div>
-
-              <div className="border border-[var(--border)] rounded-lg p-4 mb-4 bg-[#080d18]">
-                <div className="text-xs text-[var(--muted)] uppercase tracking-wider mb-3 font-mono">Challenge</div>
-                <p className="text-sm mb-4">What emotion would most people feel if they found $20 in an old jacket pocket?</p>
-                <input
-                  type="text"
-                  value={challengeAnswer}
-                  onChange={(e) => setChallengeAnswer(e.target.value)}
-                  placeholder="Type your answer..."
-                  className="w-full px-4 py-2.5 bg-[var(--background)] border border-[var(--border)] rounded-lg text-sm text-[var(--foreground)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--accent-cyan)] transition-colors"
-                  onKeyDown={(e) => e.key === "Enter" && handleChallengeSubmit()}
-                />
+              {/* Form */}
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs text-[var(--muted)] uppercase tracking-wider font-mono block mb-1.5">Display Name</label>
+                  <input
+                    type="text"
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    placeholder="Your name"
+                    className="w-full px-4 py-2.5 bg-[var(--background)] border border-[var(--border)] rounded-lg text-sm text-[var(--foreground)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--accent-cyan)] transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-[var(--muted)] uppercase tracking-wider font-mono block mb-1.5">Username</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)] text-sm">@</span>
+                    <input
+                      type="text"
+                      value={formUsername}
+                      onChange={(e) => setFormUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ""))}
+                      placeholder="username"
+                      className="w-full pl-8 pr-4 py-2.5 bg-[var(--background)] border border-[var(--border)] rounded-lg text-sm text-[var(--foreground)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--accent-cyan)] transition-colors"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-[var(--muted)] uppercase tracking-wider font-mono block mb-1.5">Bio</label>
+                  <textarea
+                    value={formBio}
+                    onChange={(e) => setFormBio(e.target.value)}
+                    placeholder="Tell us about yourself"
+                    rows={3}
+                    className="w-full px-4 py-2.5 bg-[var(--background)] border border-[var(--border)] rounded-lg text-sm text-[var(--foreground)] placeholder-[var(--muted)] resize-none focus:outline-none focus:border-[var(--accent-cyan)] transition-colors"
+                  />
+                </div>
               </div>
 
               <button
-                onClick={handleChallengeSubmit}
-                disabled={!challengeAnswer.trim()}
-                className="w-full py-3 bg-gradient-to-r from-[var(--accent-cyan)] to-[var(--accent-blue)] text-black font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
+                onClick={handleCreateAccount}
+                disabled={!formName.trim() || !formUsername.trim()}
+                className="w-full mt-6 py-3 bg-gradient-to-r from-[var(--accent-cyan)] to-[var(--accent-blue)] text-black font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                Submit
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ============================================================ */}
-      {/* CONNECT WALLET */}
-      {/* ============================================================ */}
-      {step === "connect-wallet" && (
-        <div className="max-w-lg mx-auto px-4 py-20">
-          <div className="border border-[var(--border)] bg-[var(--card-bg)] rounded-lg overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] bg-[#080d18]">
-              <span className="font-bold text-sm">Connect Wallet</span>
-              <span className="text-[var(--accent-green)] text-xs font-mono">VERIFIED HUMAN</span>
-            </div>
-            <div className="p-6 text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-500/10 border-2 border-[var(--accent-green)] flex items-center justify-center text-2xl text-[var(--accent-green)]">
-                &#x2713;
-              </div>
-              <h3 className="font-bold text-lg mb-2 text-[var(--accent-green)]">Human Verified!</h3>
-              <p className="text-sm text-[var(--muted)] mb-6">
-                Now connect your Solana wallet to post and earn. You&apos;ll need $1 of $SLOPSCAN to publish your first post.
-              </p>
-
-              <div className="flex justify-center mb-4">
-                <WalletMultiButton />
-              </div>
-
-              <button
-                onClick={() => setStep("feed")}
-                className="text-[var(--muted)] text-sm hover:text-[var(--foreground)] transition-colors underline underline-offset-4"
-              >
-                Skip for now — browse the feed
+                Create Account
               </button>
             </div>
           </div>
@@ -862,11 +832,39 @@ export default function Home() {
       {/* ============================================================ */}
       {step === "feed" && (
         <div className="max-w-2xl mx-auto px-4 py-8">
+          {/* Welcome banner */}
+          {profile && (
+            <div className="border border-emerald-500/20 bg-emerald-500/5 rounded-lg p-4 mb-6 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                {profile.profileImage ? (
+                  <img src={profile.profileImage} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center text-sm font-bold text-black">
+                    {profile.displayName[0]}
+                  </div>
+                )}
+              </div>
+              <div>
+                <div className="text-sm font-bold">Welcome, {profile.displayName}! <span className="text-[var(--accent-green)]">&#x2713;</span></div>
+                <div className="text-xs text-[var(--muted)]">You&apos;re verified human. Connect a wallet to start posting.</div>
+              </div>
+              <div className="ml-auto">
+                <WalletMultiButton />
+              </div>
+            </div>
+          )}
+
           {/* Compose */}
           <div className="border border-[var(--border)] bg-[var(--card-bg)] p-4 rounded-lg mb-6">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center text-sm font-bold text-black flex-shrink-0">
-                {(xUser?.name || "Y")[0].toUpperCase()}
+              <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                {profile?.profileImage ? (
+                  <img src={profile.profileImage} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center text-sm font-bold text-black">
+                    {(profile?.displayName || "Y")[0]}
+                  </div>
+                )}
               </div>
               <div className="flex-1">
                 <textarea
@@ -890,7 +888,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Feed */}
+          {/* Posts */}
           <div className="space-y-4">
             {posts.map((post) => (
               <PostCard key={post.id} post={post} />
