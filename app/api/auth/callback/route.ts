@@ -42,54 +42,65 @@ export async function GET(request: NextRequest) {
     if (!tokenRes.ok) {
       const errText = await tokenRes.text();
       console.error("Token exchange failed:", errText);
-      return NextResponse.redirect(`${baseUrl}?auth_error=token_failed`);
+      return NextResponse.redirect(`${baseUrl}?auth_error=token_failed&detail=${encodeURIComponent(errText.slice(0, 200))}`);
     }
 
     const tokenData = await tokenRes.json();
 
-    // Fetch user profile
+    // Fetch user profile — try with fields first, fall back to basic
+    let userData;
     const userRes = await fetch("https://api.x.com/2/users/me?user.fields=created_at,description,profile_image_url,public_metrics", {
       headers: {
         Authorization: `Bearer ${tokenData.access_token}`,
       },
     });
 
-    if (!userRes.ok) {
-      const errBody = await userRes.text();
-      console.error("User fetch failed:", userRes.status, errBody);
-      return NextResponse.redirect(`${baseUrl}?auth_error=user_fetch_failed`);
+    if (userRes.ok) {
+      userData = await userRes.json();
+    } else {
+      // Fallback: try basic endpoint without extra fields
+      const basicRes = await fetch("https://api.x.com/2/users/me", {
+        headers: {
+          Authorization: `Bearer ${tokenData.access_token}`,
+        },
+      });
+
+      if (!basicRes.ok) {
+        const errBody = await basicRes.text();
+        console.error("User fetch failed:", basicRes.status, errBody);
+        return NextResponse.redirect(`${baseUrl}?auth_error=user_fetch_failed&detail=${encodeURIComponent(errBody.slice(0, 200))}`);
+      }
+
+      userData = await basicRes.json();
     }
 
-    const userData = await userRes.json();
-
-    // Store user data in a cookie (in production, use a proper session store)
+    // Store user data in a cookie
     const userInfo = {
       id: userData.data.id,
       name: userData.data.name,
       username: userData.data.username,
-      profileImage: userData.data.profile_image_url,
-      createdAt: userData.data.created_at,
-      metrics: userData.data.public_metrics,
-      description: userData.data.description,
+      profileImage: userData.data?.profile_image_url || "",
+      createdAt: userData.data?.created_at || "",
+      metrics: userData.data?.public_metrics || null,
+      description: userData.data?.description || "",
     };
 
     const response = NextResponse.redirect(`${baseUrl}?auth=success`);
 
     response.cookies.set("slopscan_user", JSON.stringify(userInfo), {
-      httpOnly: false, // readable by client
+      httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 86400,
       path: "/",
     });
 
-    // Clear OAuth cookies
     response.cookies.delete("oauth_code_verifier");
     response.cookies.delete("oauth_state");
 
     return response;
   } catch (err) {
     console.error("OAuth callback error:", err);
-    return NextResponse.redirect(`${baseUrl}?auth_error=server_error`);
+    return NextResponse.redirect(`${baseUrl}?auth_error=server_error&detail=${encodeURIComponent(String(err).slice(0, 200))}`);
   }
 }
