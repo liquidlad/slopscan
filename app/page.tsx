@@ -250,8 +250,8 @@ function Navbar({ profile, step, onSignIn }: { profile: SlopScanProfile | null; 
     <nav className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--background)]/80 backdrop-blur-lg">
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0">
-            <img src="/logo.jpg" alt="SlopScan" className="h-full w-auto object-left" />
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center text-sm font-bold text-black">
+            S
           </div>
           <span className="text-lg font-bold tracking-tight">
             <span className="text-[var(--accent-cyan)]">Slop</span>Scan
@@ -299,6 +299,7 @@ export default function Home() {
   const [auditSignals, setAuditSignals] = useState<AuditSignal[]>([]);
   const [posts, setPosts] = useState<Post[]>(SEED_POSTS);
   const [newPostText, setNewPostText] = useState("");
+  const [showWalletPrompt, setShowWalletPrompt] = useState(false);
 
   // Account creation form
   const [formName, setFormName] = useState("");
@@ -370,18 +371,6 @@ export default function Home() {
     window.location.href = "/api/auth/twitter";
   };
 
-  const startDemoScan = useCallback(() => {
-    setXUser({
-      id: "demo",
-      name: "Demo User",
-      username: "demouser",
-      profileImage: "",
-      createdAt: "2021-03-15T00:00:00.000Z",
-      metrics: { followers_count: 847, following_count: 312, tweet_count: 2341 },
-      description: "Just a regular human checking out SlopScan.",
-    });
-    startScan(null);
-  }, [startScan]);
 
   const copyFromX = () => {
     if (xUser) {
@@ -406,6 +395,10 @@ export default function Home() {
 
   const handlePost = () => {
     if (!newPostText.trim() || !profile) return;
+    if (!connected) {
+      setShowWalletPrompt(true);
+      return;
+    }
     const newPost: Post = {
       id: Date.now(),
       author: profile.displayName,
@@ -420,6 +413,7 @@ export default function Home() {
     };
     setPosts([newPost, ...posts]);
     setNewPostText("");
+    setShowWalletPrompt(false);
   };
 
   if (!mounted) {
@@ -446,9 +440,15 @@ export default function Home() {
 
             <div className="relative max-w-6xl mx-auto px-4 py-16 md:py-24">
               <div className="flex flex-col items-center text-center">
-                <div className="relative mb-6">
-                  <img src="/logo.jpg" alt="SlopScan" className="h-20 md:h-28 w-auto object-contain" />
-                  <div className="absolute inset-0 bg-gradient-to-r from-[var(--accent-cyan)] to-[var(--accent-purple)] opacity-20 blur-2xl" />
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center">
+                    <span className="text-2xl font-bold text-black">S</span>
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] opacity-50 blur-lg" />
+                  </div>
+                  <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
+                    <span className="text-[var(--accent-cyan)] glow-cyan">Slop</span>
+                    <span className="text-[var(--foreground)]">Scan</span>
+                  </h1>
                 </div>
 
                 <p className="text-xl md:text-2xl text-[var(--muted)] mb-2 max-w-2xl">
@@ -475,12 +475,6 @@ export default function Home() {
                   </a>
                 </div>
 
-                <button
-                  onClick={startDemoScan}
-                  className="text-[var(--muted)] text-sm hover:text-[var(--foreground)] transition-colors underline underline-offset-4"
-                >
-                  Try the demo without signing in
-                </button>
               </div>
             </div>
           </header>
@@ -618,9 +612,7 @@ export default function Home() {
             <div className="max-w-6xl mx-auto px-4 py-8">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-md overflow-hidden flex-shrink-0">
-                    <img src="/logo.jpg" alt="SlopScan" className="h-full w-auto object-left" />
-                  </div>
+                  <div className="w-6 h-6 rounded-md bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center text-xs font-bold text-black">S</div>
                   <span className="font-bold text-sm">SlopScan</span>
                   <span className="text-[var(--muted)] text-xs">· Humans only.</span>
                 </div>
@@ -651,12 +643,6 @@ export default function Home() {
               className="w-full py-3 bg-[var(--foreground)] text-[var(--background)] font-bold rounded-lg hover:opacity-90 transition-opacity mb-3"
             >
               Sign In With X
-            </button>
-            <button
-              onClick={startDemoScan}
-              className="w-full py-3 border border-[var(--border)] text-[var(--muted)] rounded-lg hover:text-[var(--foreground)] hover:border-[#334155] transition-colors text-sm"
-            >
-              Continue With Demo Account
             </button>
           </div>
         </div>
@@ -740,7 +726,7 @@ export default function Home() {
             </div>
             <div className="p-6">
               {/* Copy from X button */}
-              {xUser && xUser.id !== "demo" && (
+              {xUser && (
                 <button
                   onClick={copyFromX}
                   className="w-full py-3 mb-6 border border-[var(--accent-cyan)] text-[var(--accent-cyan)] font-bold rounded-lg hover:bg-cyan-500/10 transition-colors flex items-center justify-center gap-2"
@@ -750,20 +736,6 @@ export default function Home() {
                 </button>
               )}
 
-              {xUser && xUser.id === "demo" && (
-                <button
-                  onClick={() => {
-                    setFormName("Demo User");
-                    setFormUsername("demouser");
-                    setFormBio("Just a regular human checking out SlopScan.");
-                    setFormImage("");
-                  }}
-                  className="w-full py-3 mb-6 border border-[var(--accent-cyan)] text-[var(--accent-cyan)] font-bold rounded-lg hover:bg-cyan-500/10 transition-colors flex items-center justify-center gap-2"
-                >
-                  <span>&#x1D54F;</span>
-                  Copy From X Account
-                </button>
-              )}
 
               {/* Profile preview */}
               {formImage && (
@@ -824,120 +796,69 @@ export default function Home() {
       )}
 
       {/* ============================================================ */}
-      {/* ACCOUNT PAGE */}
+      {/* PROFILE PAGE (X-style) */}
       {/* ============================================================ */}
-      {step === "account" && profile && (
-        <div className="max-w-lg mx-auto px-4 py-12">
-          {/* Profile Card */}
-          <div className="border border-[var(--border)] bg-[var(--card-bg)] rounded-lg overflow-hidden mb-6">
-            {/* Banner area */}
-            <div className="h-24 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-cyan-500/20" />
+      {(step === "account" || step === "feed") && profile && (
+        <div className="max-w-2xl mx-auto">
+          {/* Banner */}
+          <div className="h-32 md:h-48 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-cyan-500/20 relative">
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[var(--background)]" />
+          </div>
 
-            <div className="px-6 pb-6">
-              {/* Avatar */}
-              <div className="flex items-end gap-4 -mt-10 mb-4">
-                <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-[var(--card-bg)] flex-shrink-0">
-                  {profile.profileImage ? (
-                    <img src={profile.profileImage} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center text-2xl font-bold text-black">
-                      {profile.displayName[0]}
-                    </div>
-                  )}
-                </div>
-                <div className="mb-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-lg">{profile.displayName}</span>
-                    <span className="text-[var(--accent-green)]">&#x2713;</span>
-                    <ScanBadge score={100} />
+          {/* Profile Header */}
+          <div className="px-4">
+            <div className="flex items-end justify-between -mt-12 mb-3">
+              <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-[var(--background)] flex-shrink-0">
+                {profile.profileImage ? (
+                  <img src={profile.profileImage} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center text-3xl font-bold text-black">
+                    {profile.displayName[0]}
                   </div>
-                  <div className="text-[var(--muted)] text-sm">@{profile.username}</div>
-                </div>
+                )}
               </div>
+              <div className="flex items-center gap-2">
+                <ScanBadge score={100} />
+                {connected && (
+                  <span className="text-xs text-[var(--muted)] font-mono px-2 py-1 border border-[var(--border)] rounded">
+                    {publicKey?.toBase58().slice(0, 4)}...{publicKey?.toBase58().slice(-4)}
+                  </span>
+                )}
+              </div>
+            </div>
 
-              {/* Bio */}
-              {profile.bio && (
-                <p className="text-sm text-[var(--foreground)] mb-4">{profile.bio}</p>
-              )}
-
-              {/* Verified badge */}
-              <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/5 border border-emerald-500/20 rounded-lg mb-4">
+            {/* Name & handle */}
+            <div className="mb-2">
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-xl">{profile.displayName}</span>
                 <span className="text-[var(--accent-green)]">&#x2713;</span>
-                <span className="text-sm text-[var(--accent-green)] font-bold">Human Verified</span>
-                <span className="text-xs text-[var(--muted)] ml-auto">via X Account Audit</span>
               </div>
+              <div className="text-[var(--muted)] text-sm">@{profile.username}</div>
+            </div>
+
+            {/* Bio */}
+            {profile.bio && (
+              <p className="text-sm text-[var(--foreground)] mb-3">{profile.bio}</p>
+            )}
+
+            {/* Stats row */}
+            <div className="flex items-center gap-4 text-sm mb-4 pb-4 border-b border-[var(--border)]">
+              <span><strong className="text-[var(--foreground)]">{posts.filter(p => p.handle === `@${profile.username}`).length}</strong> <span className="text-[var(--muted)]">posts</span></span>
+              <span><strong className="text-[var(--foreground)]">0</strong> <span className="text-[var(--muted)]">following</span></span>
+              <span><strong className="text-[var(--foreground)]">0</strong> <span className="text-[var(--muted)]">followers</span></span>
+              <span className="ml-auto text-xs text-[var(--accent-green)] font-mono">&#x2713; Human Verified</span>
             </div>
           </div>
 
-          {/* Connect Wallet Section */}
-          <div className="border border-[var(--border)] bg-[var(--card-bg)] rounded-lg p-6 mb-6">
-            <h3 className="font-bold text-lg mb-2">Connect Wallet to Post</h3>
-            <p className="text-sm text-[var(--muted)] mb-6">
-              Connect your Solana wallet to start posting. You&apos;ll need $1 of $SLOPSCAN per post.
-            </p>
-
-            {!connected ? (
-              <div className="flex justify-center">
-                <WalletMultiButton />
-              </div>
-            ) : (
-              <div>
-                <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/5 border border-emerald-500/20 rounded-lg mb-6">
-                  <span className="text-[var(--accent-green)]">&#x2713;</span>
-                  <span className="text-sm text-[var(--accent-green)] font-bold">Wallet Connected</span>
-                  <span className="text-xs text-[var(--muted)] font-mono ml-auto">
-                    {publicKey?.toBase58().slice(0, 4)}...{publicKey?.toBase58().slice(-4)}
-                  </span>
-                </div>
-
-                {/* Token options */}
-                <div className="space-y-3">
-                  <button
-                    onClick={() => setStep("feed")}
-                    className="w-full py-3 bg-gradient-to-r from-[var(--accent-cyan)] to-[var(--accent-blue)] text-black font-bold rounded-lg hover:opacity-90 transition-opacity"
-                  >
-                    I Already Own $SLOPSCAN — Enter Feed
-                  </button>
-                  <a
-                    href="https://pump.fun/?q=slopscan&tab=created_timestamp"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full py-3 border border-[var(--accent-cyan)] text-[var(--accent-cyan)] font-bold rounded-lg hover:bg-cyan-500/10 transition-colors flex items-center justify-center"
-                  >
-                    Buy $1 of $SLOPSCAN
-                  </a>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Skip for now */}
-          {!connected && (
-            <button
-              onClick={() => setStep("feed")}
-              className="w-full text-[var(--muted)] text-sm hover:text-[var(--foreground)] transition-colors underline underline-offset-4 text-center"
-            >
-              Skip for now — browse the feed
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* ============================================================ */}
-      {/* FEED */}
-      {/* ============================================================ */}
-      {step === "feed" && (
-        <div className="max-w-2xl mx-auto px-4 py-8">
-
-          {/* Compose */}
-          <div className="border border-[var(--border)] bg-[var(--card-bg)] p-4 rounded-lg mb-6">
+          {/* Compose Box */}
+          <div className="px-4 pb-4 border-b border-[var(--border)]">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
-                {profile?.profileImage ? (
+              <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 mt-1">
+                {profile.profileImage ? (
                   <img src={profile.profileImage} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center text-sm font-bold text-black">
-                    {(profile?.displayName || "Y")[0]}
+                    {profile.displayName[0]}
                   </div>
                 )}
               </div>
@@ -945,28 +866,108 @@ export default function Home() {
                 <textarea
                   value={newPostText}
                   onChange={(e) => setNewPostText(e.target.value)}
-                  placeholder="What's happening?"
-                  rows={3}
-                  className="w-full bg-transparent text-sm text-[var(--foreground)] placeholder-[var(--muted)] resize-none focus:outline-none mb-3"
+                  placeholder="Post human slop..."
+                  rows={2}
+                  className="w-full bg-transparent text-[var(--foreground)] placeholder-[var(--muted)] resize-none focus:outline-none mb-2 text-base"
                 />
                 <div className="flex items-center justify-between">
-                  <ScanBadge score={100} />
+                  <span className="text-xs text-[var(--muted)]">$1 per post</span>
                   <button
                     onClick={handlePost}
-                    disabled={!newPostText.trim() || !connected}
-                    className="px-4 py-1.5 bg-gradient-to-r from-[var(--accent-cyan)] to-[var(--accent-blue)] text-black text-sm font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
+                    disabled={!newPostText.trim()}
+                    className="px-5 py-1.5 bg-gradient-to-r from-[var(--accent-cyan)] to-[var(--accent-blue)] text-black text-sm font-bold rounded-full hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
                   >
-                    {connected ? "Post ($1)" : "Connect wallet to post"}
+                    Post
                   </button>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Posts */}
-          <div className="space-y-4">
+          {/* Wallet Prompt Modal */}
+          {showWalletPrompt && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowWalletPrompt(false)}>
+              <div className="bg-[var(--card-bg)] border border-[var(--border)] rounded-lg p-6 max-w-sm mx-4 w-full" onClick={(e) => e.stopPropagation()}>
+                <h3 className="font-bold text-lg mb-2">Connect Wallet to Post</h3>
+                <p className="text-sm text-[var(--muted)] mb-6">
+                  You need $1 of $SLOPSCAN to post. Connect your wallet to verify ownership, or buy some first.
+                </p>
+
+                <div className="space-y-3">
+                  <div className="flex justify-center">
+                    <WalletMultiButton />
+                  </div>
+                  <div className="text-center text-xs text-[var(--muted)]">or</div>
+                  <a
+                    href="https://pump.fun/?q=slopscan&tab=created_timestamp"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3 border border-[var(--accent-cyan)] text-[var(--accent-cyan)] font-bold rounded-lg hover:bg-cyan-500/10 transition-colors flex items-center justify-center text-sm"
+                  >
+                    Buy $SLOPSCAN
+                  </a>
+                  <button
+                    onClick={() => setShowWalletPrompt(false)}
+                    className="w-full py-2 text-[var(--muted)] text-sm hover:text-[var(--foreground)] transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tab bar */}
+          <div className="flex border-b border-[var(--border)]">
+            <div className="flex-1 py-3 text-center text-sm font-bold text-[var(--accent-cyan)] border-b-2 border-[var(--accent-cyan)]">
+              Posts
+            </div>
+            <div className="flex-1 py-3 text-center text-sm text-[var(--muted)] hover:text-[var(--foreground)] cursor-pointer transition-colors">
+              Replies
+            </div>
+            <div className="flex-1 py-3 text-center text-sm text-[var(--muted)] hover:text-[var(--foreground)] cursor-pointer transition-colors">
+              Likes
+            </div>
+          </div>
+
+          {/* Timeline */}
+          <div>
             {posts.map((post) => (
-              <PostCard key={post.id} post={post} />
+              <div key={post.id} className="border-b border-[var(--border)]">
+                <div className="px-4 py-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                      {post.avatar.startsWith("http") ? (
+                        <img src={post.avatar} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center text-sm font-bold text-black">
+                          {post.avatar}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-bold text-sm">{post.author}</span>
+                        <span className="text-[var(--accent-green)] text-xs">&#x2713;</span>
+                        <span className="text-[var(--muted)] text-sm">{post.handle}</span>
+                        <span className="text-[var(--muted)] text-sm">· {post.time}</span>
+                      </div>
+                      <p className="text-sm mt-1 leading-relaxed">{post.content}</p>
+                      <div className="flex items-center gap-8 mt-2 text-[var(--muted)] text-xs">
+                        <span className="hover:text-[var(--accent-cyan)] cursor-pointer transition-colors">
+                          &#x21A9; {post.replies}
+                        </span>
+                        <span className="hover:text-[var(--accent-cyan)] cursor-pointer transition-colors">
+                          &#x2661; {post.likes}
+                        </span>
+                        <span className="text-[var(--accent-green)] font-mono">
+                          +${post.earnings.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
         </div>
