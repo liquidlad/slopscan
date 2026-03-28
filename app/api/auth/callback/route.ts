@@ -48,13 +48,15 @@ export async function GET(request: NextRequest) {
     const tokenData = await tokenRes.json();
 
     // Fetch user profile
-    const userRes = await fetch("https://api.x.com/2/users/me?user.fields=created_at,description,profile_image_url,public_metrics,verified", {
+    const userRes = await fetch("https://api.x.com/2/users/me?user.fields=created_at,description,profile_image_url,public_metrics", {
       headers: {
         Authorization: `Bearer ${tokenData.access_token}`,
       },
     });
 
     if (!userRes.ok) {
+      const errBody = await userRes.text();
+      console.error("User fetch failed:", userRes.status, errBody);
       return NextResponse.redirect(`${baseUrl}?auth_error=user_fetch_failed`);
     }
 
