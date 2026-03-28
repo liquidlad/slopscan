@@ -43,50 +43,86 @@ interface Post {
   avatar: string;
   content: string;
   likes: number;
+  likedBy: string[];
+  reposts: number;
+  repostedBy: string[];
   replies: number;
   earnings: number;
-  time: string;
+  createdAt: number;
   humanScore: number;
 }
 
-const SEED_POSTS: Post[] = [
-  {
-    id: 1,
-    author: "sarah.sol",
-    handle: "@sarahbuilds",
-    avatar: "S",
-    content: "Just shipped a new feature for our DEX aggregator. Routing is 40% faster now. Real builders ship, real users notice.",
-    likes: 142,
-    replies: 23,
-    earnings: 3.42,
-    time: "2m ago",
-    humanScore: 99,
-  },
-  {
-    id: 2,
-    author: "defi_mike",
-    handle: "@defimike",
-    avatar: "M",
-    content: "Hot take: The best anti-spam mechanism isn't a fee — it's proving you're actually human. SlopScan gets it right.",
-    likes: 89,
-    replies: 31,
-    earnings: 2.18,
-    time: "8m ago",
-    humanScore: 97,
-  },
-  {
-    id: 3,
-    author: "crypto_kate",
-    handle: "@katecrypto",
-    avatar: "K",
-    content: "Day 3 on SlopScan: my feed is pure signal. No shilling bots, no copy-paste engagement farming. This is what social media should feel like.",
-    likes: 312,
-    replies: 58,
-    earnings: 8.91,
-    time: "14m ago",
-    humanScore: 100,
-  },
-];
+const MAX_POST_LENGTH = 280;
+
+// SVG Icons (X-style)
+function IconReply({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className || "w-[18px] h-[18px]"} fill="currentColor">
+      <path d="M1.751 10c0-4.42 3.584-8 8.005-8h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.25-.893 4.306-2.394 5.786l-2.455 2.373a1 1 0 01-1.398-.036L14.6 16.77a1 1 0 01.036-1.45l2.131-2.058A4.13 4.13 0 0018.25 10.13c0-2.291-1.837-4.13-4.128-4.13H9.756a4 4 0 00-4.005 4v.58a1 1 0 01-.293.706L3.05 13.694a1 1 0 01-1.299.042V10z" opacity="0" />
+      <path d="M14.046 18.15a1.25 1.25 0 01-1.792 0l-5.5-5.6a1.25 1.25 0 010-1.75l5.5-5.6a1.25 1.25 0 011.792 1.75L9.571 11.5h8.18a3.25 3.25 0 013.25 3.25v3a1.25 1.25 0 01-2.5 0v-3a.75.75 0 00-.75-.75h-8.18l4.475 4.55a1.25 1.25 0 010 1.75v-.1z" />
+    </svg>
+  );
+}
+
+function IconRepost({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className || "w-[18px] h-[18px]"} fill="currentColor">
+      <path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.791-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.791 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z" />
+    </svg>
+  );
+}
+
+function IconHeart({ filled, className }: { filled?: boolean; className?: string }) {
+  return filled ? (
+    <svg viewBox="0 0 24 24" className={className || "w-[18px] h-[18px]"} fill="currentColor">
+      <path d="M20.884 13.19c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.45-4.92-.334-6.98 1.298-2.402 4.2-3.71 6.994-2.66 1.076.405 2.03 1.09 2.724 2.03.695-.94 1.65-1.625 2.725-2.03 2.793-1.05 5.695.258 6.993 2.66 1.117 2.06 1.027 4.48-.334 6.98z" />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 24 24" className={className || "w-[18px] h-[18px]"} fill="currentColor">
+      <path d="M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.561-1.13-1.666-1.84-2.908-1.91zm4.187 7.69c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.45-4.92-.334-6.98C4.08 3.71 6.983 2.4 9.776 3.45c.984.37 1.862.95 2.583 1.69.072-.08.145-.155.22-.228a5.82 5.82 0 012.362-1.462c2.794-1.05 5.696.258 6.993 2.66 1.117 2.06 1.027 4.48-.334 6.98z" />
+    </svg>
+  );
+}
+
+function IconShare({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className || "w-[18px] h-[18px]"} fill="currentColor">
+      <path d="M12 2.59l5.7 5.7-1.41 1.42L13 6.41V16h-2V6.41l-3.3 3.3-1.41-1.42L12 2.59zM21 15l-.02 3.51c0 1.38-1.12 2.49-2.5 2.49H5.5C4.11 21 3 19.88 3 18.5V15h2v3.5c0 .28.22.5.5.5h12.98c.28 0 .5-.22.5-.5L19 15h2z" />
+    </svg>
+  );
+}
+
+function IconHome({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className || "w-[26px] h-[26px]"} fill="currentColor">
+      <path d="M21.591 7.146L12.52 1.157c-.316-.21-.724-.21-1.04 0l-9.071 5.99c-.26.173-.409.456-.409.757v13.183c0 .502.418.913.929.913h5.852a.93.93 0 00.929-.913v-7.075h3.58v7.075a.93.93 0 00.929.913h5.852a.93.93 0 00.929-.913V7.904c0-.301-.158-.584-.409-.758z" />
+    </svg>
+  );
+}
+
+function IconProfile({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className || "w-[26px] h-[26px]"} fill="currentColor">
+      <path d="M12 11.816c1.355 0 2.872-.15 3.84-1.256.814-.93 1.078-2.368.806-4.392-.38-2.825-2.117-4.512-4.646-4.512S7.734 3.343 7.354 6.17c-.272 2.022-.008 3.46.806 4.39.968 1.107 2.485 1.256 3.84 1.256zM8.84 6.368c.162-1.2.787-3.212 3.16-3.212s2.998 2.013 3.16 3.212c.207 1.55.057 2.627-.45 3.205-.455.52-1.266.743-2.71.743s-2.255-.223-2.71-.743c-.507-.578-.657-1.656-.45-3.205zm11.44 12.868c-.877-3.526-4.282-5.99-8.28-5.99s-7.403 2.464-8.28 5.99c-.172.692-.028 1.4.395 1.94.408.52 1.04.82 1.733.82h12.304c.693 0 1.325-.3 1.733-.82.424-.54.567-1.247.394-1.94zm-1.576 1.016c-.126.16-.316.246-.552.246H5.848c-.235 0-.426-.085-.552-.246-.137-.174-.18-.412-.12-.654.71-2.855 3.517-4.85 6.824-4.85s6.114 1.994 6.824 4.85c.06.242.017.48-.12.654z" />
+    </svg>
+  );
+}
+
+function IconSignOut({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className || "w-[26px] h-[26px]"} fill="currentColor">
+      <path d="M16 13v-2H7V8l-5 4 5 4v-3h9zm-2-9h5v16h-5v2h5c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2h-5v2z" />
+    </svg>
+  );
+}
+
+function relativeTime(ts: number): string {
+  const diff = Math.floor((Date.now() - ts) / 1000);
+  if (diff < 60) return "now";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+  return `${Math.floor(diff / 86400)}d`;
+}
 
 // ============================================================
 // GENERATE AUDIT SIGNALS (always pass for now)
@@ -200,52 +236,14 @@ function SignalRow({ signal, delay }: { signal: AuditSignal; delay: number }) {
   );
 }
 
-function PostCard({ post }: { post: Post }) {
-  const [likes, setLikes] = useState(post.likes);
-  const [liked, setLiked] = useState(false);
-
-  return (
-    <div className="border border-[var(--border)] bg-[var(--card-bg)] p-4 rounded-lg hover:border-[#334155] transition-colors">
-      <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center text-sm font-bold text-black flex-shrink-0 overflow-hidden">
-          {post.avatar.startsWith("http") ? (
-            <img src={post.avatar} alt="" className="w-full h-full object-cover" />
-          ) : (
-            post.avatar
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-bold text-sm">{post.author}</span>
-            <span className="text-[var(--accent-green)] text-xs">&#x2713;</span>
-            <span className="text-[var(--muted)] text-xs">{post.handle}</span>
-            <span className="text-[var(--muted)] text-xs">· {post.time}</span>
-            <ScanBadge score={post.humanScore} />
-          </div>
-          <p className="text-sm mt-2 leading-relaxed">{post.content}</p>
-          <div className="flex items-center gap-6 mt-3 text-xs text-[var(--muted)]">
-            <button
-              onClick={() => { if (!liked) { setLikes(likes + 1); setLiked(true); } }}
-              className={`transition-colors ${liked ? "text-[var(--accent-red)]" : "hover:text-[var(--accent-cyan)]"}`}
-            >
-              {liked ? "\u2665" : "\u2661"} {likes}
-            </button>
-            <span className="hover:text-[var(--accent-cyan)] cursor-pointer transition-colors">
-              &#x21A9; {post.replies}
-            </span>
-            <span className="text-[var(--accent-green)] font-mono font-bold">
-              +${post.earnings.toFixed(2)}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Navbar({ profile, step, onSignIn }: { profile: SlopScanProfile | null; step: AppStep; onSignIn: () => void }) {
-  const { publicKey } = useWallet();
-
+function Navbar({ profile, step, onSignIn, onSignOut, feedView, onFeedView }: {
+  profile: SlopScanProfile | null;
+  step: AppStep;
+  onSignIn: () => void;
+  onSignOut?: () => void;
+  feedView?: "home" | "profile";
+  onFeedView?: (v: "home" | "profile") => void;
+}) {
   return (
     <nav className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--background)]/80 backdrop-blur-lg">
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -260,19 +258,43 @@ function Navbar({ profile, step, onSignIn }: { profile: SlopScanProfile | null; 
 
         <div className="flex items-center gap-3">
           {profile ? (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--card-bg)] border border-[var(--border)] rounded-lg">
-              <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0">
-                {profile.profileImage ? (
-                  <img src={profile.profileImage} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center text-xs font-bold text-black">
-                    {profile.displayName[0]}
-                  </div>
-                )}
+            <>
+              {/* Nav links for mobile (desktop uses sidebar) */}
+              <div className="flex items-center gap-1 md:hidden">
+                <button
+                  onClick={() => onFeedView?.("home")}
+                  className={`p-2 rounded-full transition-colors ${feedView === "home" ? "text-[var(--accent-cyan)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"}`}
+                >
+                  <IconHome className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => onFeedView?.("profile")}
+                  className={`p-2 rounded-full transition-colors ${feedView === "profile" ? "text-[var(--accent-cyan)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"}`}
+                >
+                  <IconProfile className="w-5 h-5" />
+                </button>
               </div>
-              <span className="text-sm font-bold">{profile.displayName}</span>
-              <span className="text-[var(--accent-green)] text-xs">&#x2713;</span>
-            </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--card-bg)] border border-[var(--border)] rounded-lg">
+                <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0">
+                  {profile.profileImage ? (
+                    <img src={profile.profileImage} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center text-xs font-bold text-black">
+                      {profile.displayName[0]}
+                    </div>
+                  )}
+                </div>
+                <span className="text-sm font-bold hidden sm:inline">{profile.displayName}</span>
+                <span className="text-[var(--accent-green)] text-xs">&#x2713;</span>
+              </div>
+              <button
+                onClick={onSignOut}
+                className="md:hidden p-2 text-[var(--muted)] hover:text-[var(--accent-red)] transition-colors"
+                title="Sign out"
+              >
+                <IconSignOut className="w-5 h-5" />
+              </button>
+            </>
           ) : step === "landing" ? (
             <button
               onClick={onSignIn}
@@ -297,9 +319,11 @@ export default function Home() {
   const [profile, setProfile] = useState<SlopScanProfile | null>(null);
   const [scanProgress, setScanProgress] = useState(0);
   const [auditSignals, setAuditSignals] = useState<AuditSignal[]>([]);
-  const [posts, setPosts] = useState<Post[]>(SEED_POSTS);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [newPostText, setNewPostText] = useState("");
   const [showWalletPrompt, setShowWalletPrompt] = useState(false);
+  const [feedView, setFeedView] = useState<"home" | "profile">("home");
+  const [activeTab, setActiveTab] = useState<"posts" | "likes">("posts");
 
   // Account creation form
   const [formName, setFormName] = useState("");
@@ -309,9 +333,31 @@ export default function Home() {
 
   const { connected, publicKey } = useWallet();
 
+  // Fetch posts from API
+  const fetchPosts = useCallback(async () => {
+    try {
+      const res = await fetch("/api/posts");
+      if (res.ok) {
+        const data = await res.json();
+        setPosts(data);
+      }
+    } catch {}
+  }, []);
+
   // Check for existing session or OAuth callback
   useEffect(() => {
     setMounted(true);
+    fetchPosts();
+
+    // Restore saved profile from localStorage
+    const savedProfile = localStorage.getItem("slopscan_profile");
+    if (savedProfile) {
+      try {
+        const p = JSON.parse(savedProfile);
+        setProfile(p);
+        setStep("feed");
+      } catch {}
+    }
 
     const cookies = document.cookie.split(";").reduce((acc, c) => {
       const [key, val] = c.trim().split("=");
@@ -330,8 +376,6 @@ export default function Home() {
           window.history.replaceState({}, "", "/");
           startScan(user);
         }
-        // Returning user with existing profile would go to feed
-        // For now, always restart flow on refresh
       } catch {
         // Invalid cookie
       }
@@ -390,30 +434,80 @@ export default function Home() {
       profileImage: formImage,
     };
     setProfile(newProfile);
-    setStep("account");
+    localStorage.setItem("slopscan_profile", JSON.stringify(newProfile));
+    setStep("feed");
   };
 
-  const handlePost = () => {
+  const handlePost = async () => {
     if (!newPostText.trim() || !profile) return;
     if (!connected) {
       setShowWalletPrompt(true);
       return;
     }
-    const newPost: Post = {
-      id: Date.now(),
-      author: profile.displayName,
-      handle: `@${profile.username}`,
-      avatar: profile.profileImage || profile.displayName[0].toUpperCase(),
-      content: newPostText,
-      likes: 0,
-      replies: 0,
-      earnings: 0,
-      time: "now",
-      humanScore: 100,
-    };
-    setPosts([newPost, ...posts]);
-    setNewPostText("");
-    setShowWalletPrompt(false);
+    try {
+      const res = await fetch("/api/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          author: profile.displayName,
+          handle: `@${profile.username}`,
+          avatar: profile.profileImage || profile.displayName[0].toUpperCase(),
+          content: newPostText,
+          humanScore: 100,
+        }),
+      });
+      if (res.ok) {
+        const post = await res.json();
+        setPosts((prev) => [post, ...prev]);
+        setNewPostText("");
+        setShowWalletPrompt(false);
+      }
+    } catch {}
+  };
+
+  const handleLike = async (postId: number) => {
+    if (!profile) return;
+    try {
+      const res = await fetch(`/api/posts/${postId}/like`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: profile.username }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setPosts((prev) => prev.map((p) => (p.id === postId ? updated : p)));
+      }
+    } catch {}
+  };
+
+  const handleRepost = async (postId: number) => {
+    if (!profile) return;
+    try {
+      const res = await fetch(`/api/posts/${postId}/repost`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: profile.username }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setPosts((prev) => prev.map((p) => (p.id === postId ? updated : p)));
+      }
+    } catch {}
+  };
+
+  const handleShare = (postId: number) => {
+    const url = `${window.location.origin}/?post=${postId}`;
+    navigator.clipboard.writeText(url);
+  };
+
+  const handleSignOut = () => {
+    localStorage.removeItem("slopscan_profile");
+    document.cookie = "slopscan_user=; max-age=0; path=/";
+    setProfile(null);
+    setXUser(null);
+    setStep("landing");
+    setFeedView("home");
+    setActiveTab("posts");
   };
 
   if (!mounted) {
@@ -427,7 +521,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[var(--background)] grid-bg">
       <div className="scan-line" />
-      <Navbar profile={profile} step={step} onSignIn={handleSignInWithX} />
+      <Navbar profile={profile} step={step} onSignIn={handleSignInWithX} onSignOut={handleSignOut} feedView={feedView} onFeedView={setFeedView} />
 
       {/* ============================================================ */}
       {/* LANDING */}
@@ -796,179 +890,306 @@ export default function Home() {
       )}
 
       {/* ============================================================ */}
-      {/* PROFILE PAGE (X-style) */}
+      {/* FEED (X-style layout) */}
       {/* ============================================================ */}
       {(step === "account" || step === "feed") && profile && (
-        <div className="max-w-2xl mx-auto">
-          {/* Banner */}
-          <div className="h-32 md:h-48 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-cyan-500/20 relative">
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[var(--background)]" />
-          </div>
-
-          {/* Profile Header */}
-          <div className="px-4">
-            <div className="flex items-end justify-between -mt-12 mb-3">
-              <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-[var(--background)] flex-shrink-0">
-                {profile.profileImage ? (
-                  <img src={profile.profileImage} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center text-3xl font-bold text-black">
-                    {profile.displayName[0]}
-                  </div>
-                )}
+        <div className="max-w-[1200px] mx-auto flex">
+          {/* Left Sidebar — hidden on mobile */}
+          <aside className="hidden md:flex flex-col w-[68px] xl:w-[250px] sticky top-[57px] h-[calc(100vh-57px)] border-r border-[var(--border)] py-4 px-2 xl:px-4 shrink-0">
+            <nav className="flex flex-col gap-1 flex-1">
+              <button
+                onClick={() => { setFeedView("home"); setActiveTab("posts"); }}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-full transition-colors ${feedView === "home" ? "text-[var(--foreground)] font-bold" : "text-[var(--muted)] hover:bg-white/5"}`}
+              >
+                <IconHome className="w-[26px] h-[26px] shrink-0" />
+                <span className="hidden xl:inline text-lg">Home</span>
+              </button>
+              <button
+                onClick={() => { setFeedView("profile"); setActiveTab("posts"); }}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-full transition-colors ${feedView === "profile" ? "text-[var(--foreground)] font-bold" : "text-[var(--muted)] hover:bg-white/5"}`}
+              >
+                <IconProfile className="w-[26px] h-[26px] shrink-0" />
+                <span className="hidden xl:inline text-lg">Profile</span>
+              </button>
+              <div className="flex justify-center xl:justify-start px-3 py-2">
+                <WalletMultiButton />
               </div>
-              <div className="flex items-center gap-2">
-                <ScanBadge score={100} />
-                {connected && (
-                  <span className="text-xs text-[var(--muted)] font-mono px-2 py-1 border border-[var(--border)] rounded">
-                    {publicKey?.toBase58().slice(0, 4)}...{publicKey?.toBase58().slice(-4)}
-                  </span>
-                )}
-              </div>
-            </div>
+            </nav>
 
-            {/* Name & handle */}
-            <div className="mb-2">
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-xl">{profile.displayName}</span>
-                <span className="text-[var(--accent-green)]">&#x2713;</span>
-              </div>
-              <div className="text-[var(--muted)] text-sm">@{profile.username}</div>
-            </div>
+            {/* Sign out at bottom */}
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-full text-[var(--muted)] hover:text-[var(--accent-red)] hover:bg-red-500/5 transition-colors mt-auto"
+            >
+              <IconSignOut className="w-[26px] h-[26px] shrink-0" />
+              <span className="hidden xl:inline text-lg">Sign Out</span>
+            </button>
+          </aside>
 
-            {/* Bio */}
-            {profile.bio && (
-              <p className="text-sm text-[var(--foreground)] mb-3">{profile.bio}</p>
-            )}
-
-            {/* Stats row */}
-            <div className="flex items-center gap-4 text-sm mb-4 pb-4 border-b border-[var(--border)]">
-              <span><strong className="text-[var(--foreground)]">{posts.filter(p => p.handle === `@${profile.username}`).length}</strong> <span className="text-[var(--muted)]">posts</span></span>
-              <span><strong className="text-[var(--foreground)]">0</strong> <span className="text-[var(--muted)]">following</span></span>
-              <span><strong className="text-[var(--foreground)]">0</strong> <span className="text-[var(--muted)]">followers</span></span>
-              <span className="ml-auto text-xs text-[var(--accent-green)] font-mono">&#x2713; Human Verified</span>
-            </div>
-          </div>
-
-          {/* Compose Box */}
-          <div className="px-4 pb-4 border-b border-[var(--border)]">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 mt-1">
-                {profile.profileImage ? (
-                  <img src={profile.profileImage} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center text-sm font-bold text-black">
-                    {profile.displayName[0]}
-                  </div>
-                )}
-              </div>
-              <div className="flex-1">
-                <textarea
-                  value={newPostText}
-                  onChange={(e) => setNewPostText(e.target.value)}
-                  placeholder="Post human slop..."
-                  rows={2}
-                  className="w-full bg-transparent text-[var(--foreground)] placeholder-[var(--muted)] resize-none focus:outline-none mb-2 text-base"
-                />
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-[var(--muted)]">$1 per post</span>
-                  <button
-                    onClick={handlePost}
-                    disabled={!newPostText.trim()}
-                    className="px-5 py-1.5 bg-gradient-to-r from-[var(--accent-cyan)] to-[var(--accent-blue)] text-black text-sm font-bold rounded-full hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    Post
-                  </button>
+          {/* Main Feed */}
+          <main className="flex-1 min-w-0 max-w-[600px] border-r border-[var(--border)]">
+            {/* Profile header (shown in profile view) */}
+            {feedView === "profile" && (
+              <>
+                <div className="h-32 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-cyan-500/20 relative">
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[var(--background)]" />
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Wallet Prompt Modal */}
-          {showWalletPrompt && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowWalletPrompt(false)}>
-              <div className="bg-[var(--card-bg)] border border-[var(--border)] rounded-lg p-6 max-w-sm mx-4 w-full" onClick={(e) => e.stopPropagation()}>
-                <h3 className="font-bold text-lg mb-2">Connect Wallet to Post</h3>
-                <p className="text-sm text-[var(--muted)] mb-6">
-                  You need $1 of $SLOPSCAN to post. Connect your wallet to verify ownership, or buy some first.
-                </p>
-
-                <div className="space-y-3">
-                  <div className="flex justify-center">
-                    <WalletMultiButton />
-                  </div>
-                  <div className="text-center text-xs text-[var(--muted)]">or</div>
-                  <a
-                    href="https://pump.fun/?q=slopscan&tab=created_timestamp"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full py-3 border border-[var(--accent-cyan)] text-[var(--accent-cyan)] font-bold rounded-lg hover:bg-cyan-500/10 transition-colors flex items-center justify-center text-sm"
-                  >
-                    Buy $SLOPSCAN
-                  </a>
-                  <button
-                    onClick={() => setShowWalletPrompt(false)}
-                    className="w-full py-2 text-[var(--muted)] text-sm hover:text-[var(--foreground)] transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Tab bar */}
-          <div className="flex border-b border-[var(--border)]">
-            <div className="flex-1 py-3 text-center text-sm font-bold text-[var(--accent-cyan)] border-b-2 border-[var(--accent-cyan)]">
-              Posts
-            </div>
-            <div className="flex-1 py-3 text-center text-sm text-[var(--muted)] hover:text-[var(--foreground)] cursor-pointer transition-colors">
-              Replies
-            </div>
-            <div className="flex-1 py-3 text-center text-sm text-[var(--muted)] hover:text-[var(--foreground)] cursor-pointer transition-colors">
-              Likes
-            </div>
-          </div>
-
-          {/* Timeline */}
-          <div>
-            {posts.map((post) => (
-              <div key={post.id} className="border-b border-[var(--border)]">
-                <div className="px-4 py-3">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
-                      {post.avatar.startsWith("http") ? (
-                        <img src={post.avatar} alt="" className="w-full h-full object-cover" />
+                <div className="px-4">
+                  <div className="flex items-end justify-between -mt-10 mb-3">
+                    <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-[var(--background)] flex-shrink-0">
+                      {profile.profileImage ? (
+                        <img src={profile.profileImage} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center text-sm font-bold text-black">
-                          {post.avatar}
+                        <div className="w-full h-full bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center text-2xl font-bold text-black">
+                          {profile.displayName[0]}
                         </div>
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-bold text-sm">{post.author}</span>
-                        <span className="text-[var(--accent-green)] text-xs">&#x2713;</span>
-                        <span className="text-[var(--muted)] text-sm">{post.handle}</span>
-                        <span className="text-[var(--muted)] text-sm">· {post.time}</span>
+                    <ScanBadge score={100} />
+                  </div>
+                  <div className="mb-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-xl">{profile.displayName}</span>
+                      <span className="text-[var(--accent-green)]">&#x2713;</span>
+                    </div>
+                    <div className="text-[var(--muted)] text-sm">@{profile.username}</div>
+                  </div>
+                  {profile.bio && <p className="text-sm text-[var(--foreground)] mb-3">{profile.bio}</p>}
+                  <div className="flex items-center gap-4 text-sm pb-3 border-b border-[var(--border)]">
+                    <span><strong>{posts.filter(p => p.handle === `@${profile.username}`).length}</strong> <span className="text-[var(--muted)]">posts</span></span>
+                    <span><strong>0</strong> <span className="text-[var(--muted)]">following</span></span>
+                    <span><strong>0</strong> <span className="text-[var(--muted)]">followers</span></span>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Feed header (shown in home view) */}
+            {feedView === "home" && (
+              <div className="sticky top-[57px] z-30 bg-[var(--background)]/80 backdrop-blur-lg border-b border-[var(--border)] px-4 py-3">
+                <h2 className="font-bold text-lg">Home</h2>
+              </div>
+            )}
+
+            {/* Compose Box */}
+            {feedView === "home" && (
+              <div className="px-4 py-3 border-b border-[var(--border)]">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 mt-1">
+                    {profile.profileImage ? (
+                      <img src={profile.profileImage} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center text-sm font-bold text-black">
+                        {profile.displayName[0]}
                       </div>
-                      <p className="text-sm mt-1 leading-relaxed">{post.content}</p>
-                      <div className="flex items-center gap-8 mt-2 text-[var(--muted)] text-xs">
-                        <span className="hover:text-[var(--accent-cyan)] cursor-pointer transition-colors">
-                          &#x21A9; {post.replies}
-                        </span>
-                        <span className="hover:text-[var(--accent-cyan)] cursor-pointer transition-colors">
-                          &#x2661; {post.likes}
-                        </span>
-                        <span className="text-[var(--accent-green)] font-mono">
-                          +${post.earnings.toFixed(2)}
-                        </span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <textarea
+                      value={newPostText}
+                      onChange={(e) => {
+                        if (e.target.value.length <= MAX_POST_LENGTH) setNewPostText(e.target.value);
+                      }}
+                      placeholder="What's happening?"
+                      rows={2}
+                      className="w-full bg-transparent text-[var(--foreground)] placeholder-[var(--muted)] resize-none focus:outline-none mb-2 text-[17px] leading-relaxed"
+                    />
+                    <div className="flex items-center justify-between border-t border-[var(--border)] pt-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-[var(--muted)]">$1 per post</span>
+                        {newPostText.length > 0 && (
+                          <span className={`text-xs font-mono ${newPostText.length > MAX_POST_LENGTH * 0.9 ? "text-[var(--accent-red)]" : "text-[var(--muted)]"}`}>
+                            {newPostText.length}/{MAX_POST_LENGTH}
+                          </span>
+                        )}
                       </div>
+                      <button
+                        onClick={handlePost}
+                        disabled={!newPostText.trim() || newPostText.length > MAX_POST_LENGTH}
+                        className="px-5 py-1.5 bg-gradient-to-r from-[var(--accent-cyan)] to-[var(--accent-blue)] text-black text-sm font-bold rounded-full hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        Post
+                      </button>
                     </div>
                   </div>
                 </div>
               </div>
-            ))}
+            )}
+
+            {/* Tab bar */}
+            <div className="flex border-b border-[var(--border)]">
+              <button
+                onClick={() => setActiveTab("posts")}
+                className={`flex-1 py-3 text-center text-sm font-bold transition-colors relative ${activeTab === "posts" ? "text-[var(--foreground)]" : "text-[var(--muted)] hover:bg-white/5"}`}
+              >
+                Posts
+                {activeTab === "posts" && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 rounded-full bg-[var(--accent-cyan)]" />}
+              </button>
+              <button
+                onClick={() => setActiveTab("likes")}
+                className={`flex-1 py-3 text-center text-sm font-bold transition-colors relative ${activeTab === "likes" ? "text-[var(--foreground)]" : "text-[var(--muted)] hover:bg-white/5"}`}
+              >
+                Likes
+                {activeTab === "likes" && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 rounded-full bg-[var(--accent-cyan)]" />}
+              </button>
+            </div>
+
+            {/* Timeline */}
+            <div>
+              {(() => {
+                let filtered = posts;
+                if (feedView === "profile") {
+                  if (activeTab === "posts") {
+                    filtered = posts.filter(p => p.handle === `@${profile.username}`);
+                  } else {
+                    filtered = posts.filter(p => p.likedBy?.includes(profile.username));
+                  }
+                } else if (activeTab === "likes") {
+                  filtered = posts.filter(p => p.likedBy?.includes(profile.username));
+                }
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="py-16 px-4 text-center">
+                      <div className="text-4xl mb-3">
+                        {activeTab === "likes" ? "\u2661" : "\u270D"}
+                      </div>
+                      <h3 className="font-bold text-xl mb-1">
+                        {activeTab === "likes" ? "No likes yet" : feedView === "profile" ? "No posts yet" : "Welcome to SlopScan"}
+                      </h3>
+                      <p className="text-[var(--muted)] text-sm max-w-sm mx-auto">
+                        {activeTab === "likes"
+                          ? "Posts you like will show up here."
+                          : feedView === "profile"
+                          ? "When you post, your posts will show up here."
+                          : "Be the first human to post. Connect your wallet and share something real."}
+                      </p>
+                    </div>
+                  );
+                }
+
+                return filtered.map((post) => {
+                  const isLiked = post.likedBy?.includes(profile.username);
+                  const isReposted = post.repostedBy?.includes(profile.username);
+                  return (
+                    <div key={post.id} className="border-b border-[var(--border)] hover:bg-white/[0.02] transition-colors">
+                      <div className="px-4 py-3">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                            {post.avatar.startsWith("http") ? (
+                              <img src={post.avatar} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center text-sm font-bold text-black">
+                                {post.avatar}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-bold text-[15px]">{post.author}</span>
+                              <span className="text-[var(--accent-green)] text-xs">&#x2713;</span>
+                              <span className="text-[var(--muted)] text-[15px]">{post.handle}</span>
+                              <span className="text-[var(--muted)] text-[15px]">&#xB7; {relativeTime(post.createdAt)}</span>
+                            </div>
+                            <p className="text-[15px] mt-0.5 leading-snug whitespace-pre-wrap">{post.content}</p>
+
+                            {/* Action bar */}
+                            <div className="flex items-center justify-between max-w-[400px] mt-2 -ml-2">
+                              {/* Reply */}
+                              <button className="group flex items-center gap-1.5 p-2 rounded-full hover:bg-cyan-500/10 transition-colors text-[var(--muted)] hover:text-[var(--accent-cyan)]">
+                                <IconReply className="w-[18px] h-[18px]" />
+                                <span className="text-[13px]">{post.replies || ""}</span>
+                              </button>
+                              {/* Repost */}
+                              <button
+                                onClick={() => handleRepost(post.id)}
+                                className={`group flex items-center gap-1.5 p-2 rounded-full transition-colors ${isReposted ? "text-[#00ba7c]" : "text-[var(--muted)] hover:bg-green-500/10 hover:text-[#00ba7c]"}`}
+                              >
+                                <IconRepost className="w-[18px] h-[18px]" />
+                                <span className="text-[13px]">{post.reposts || ""}</span>
+                              </button>
+                              {/* Like */}
+                              <button
+                                onClick={() => handleLike(post.id)}
+                                className={`group flex items-center gap-1.5 p-2 rounded-full transition-colors ${isLiked ? "text-[#f91880]" : "text-[var(--muted)] hover:bg-pink-500/10 hover:text-[#f91880]"}`}
+                              >
+                                <IconHeart filled={isLiked} className="w-[18px] h-[18px]" />
+                                <span className="text-[13px]">{post.likes || ""}</span>
+                              </button>
+                              {/* Share */}
+                              <button
+                                onClick={() => handleShare(post.id)}
+                                className="group flex items-center p-2 rounded-full hover:bg-cyan-500/10 transition-colors text-[var(--muted)] hover:text-[var(--accent-cyan)]"
+                              >
+                                <IconShare className="w-[18px] h-[18px]" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </main>
+
+          {/* Right Sidebar */}
+          <aside className="hidden lg:block w-[350px] sticky top-[57px] h-[calc(100vh-57px)] py-4 px-6">
+            <div className="border border-[var(--border)] bg-[var(--card-bg)] rounded-2xl p-4 mb-4">
+              <h3 className="font-bold text-lg mb-3">$SLOPSCAN</h3>
+              <p className="text-sm text-[var(--muted)] mb-3">The token that powers human-only social.</p>
+              <a
+                href="https://pump.fun/?q=slopscan&tab=created_timestamp"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full py-2.5 text-center bg-gradient-to-r from-[var(--accent-cyan)] to-[var(--accent-blue)] text-black text-sm font-bold rounded-full hover:opacity-90 transition-opacity"
+              >
+                Buy $SLOPSCAN
+              </a>
+            </div>
+
+            <div className="border border-[var(--border)] bg-[var(--card-bg)] rounded-2xl p-4">
+              <h3 className="font-bold mb-3">How it works</h3>
+              <ul className="space-y-2 text-sm text-[var(--muted)]">
+                <li className="flex items-start gap-2"><span className="text-[var(--accent-cyan)]">1.</span> Sign in with X</li>
+                <li className="flex items-start gap-2"><span className="text-[var(--accent-cyan)]">2.</span> Pass the human scan</li>
+                <li className="flex items-start gap-2"><span className="text-[var(--accent-cyan)]">3.</span> Connect wallet &amp; post</li>
+                <li className="flex items-start gap-2"><span className="text-[var(--accent-cyan)]">4.</span> Earn from engagement</li>
+              </ul>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {/* Wallet Prompt Modal */}
+      {showWalletPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowWalletPrompt(false)}>
+          <div className="bg-[var(--card-bg)] border border-[var(--border)] rounded-2xl p-6 max-w-sm mx-4 w-full" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-bold text-lg mb-2">Connect Wallet to Post</h3>
+            <p className="text-sm text-[var(--muted)] mb-6">
+              You need $1 of $SLOPSCAN to post. Connect your wallet first.
+            </p>
+            <div className="space-y-3">
+              <div className="flex justify-center">
+                <WalletMultiButton />
+              </div>
+              <div className="text-center text-xs text-[var(--muted)]">or</div>
+              <a
+                href="https://pump.fun/?q=slopscan&tab=created_timestamp"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 border border-[var(--accent-cyan)] text-[var(--accent-cyan)] font-bold rounded-lg hover:bg-cyan-500/10 transition-colors flex items-center justify-center text-sm"
+              >
+                Buy $SLOPSCAN
+              </a>
+              <button
+                onClick={() => setShowWalletPrompt(false)}
+                className="w-full py-2 text-[var(--muted)] text-sm hover:text-[var(--foreground)] transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
